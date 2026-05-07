@@ -6,6 +6,7 @@
 <title>Flow-OPD: On-Policy Distillation for Flow Matching Models</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html { scroll-behavior: smooth; }
@@ -203,6 +204,7 @@
   .formula-block .formula-group { margin-bottom: 12px; }
   .formula-block .formula-group:last-child { margin-bottom: 0; }
   .formula-block .fc { color: #9ca3af; font-style: italic; }
+  .katex { font-size: 1em !important; }
 
   .mar-box {
     background: #fafafa; border: 1px solid #e5e7eb; border-left: 3px solid #4f46e5;
@@ -330,7 +332,27 @@
   .reveal { opacity: 0; transform: translateY(14px); transition: opacity 0.5s ease, transform 0.5s ease; }
   .reveal.visible { opacity: 1; transform: translateY(0); }
 
-  /* ===== USER-INSERTED IMAGES ===== */
+  /* ===== INLINE IMAGE PLACEHOLDERS in results ===== */
+  .img-placeholder {
+    background: #f9fafb; border: 2px dashed #e5e7eb; border-radius: 10px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 180px; margin-bottom: 28px; text-align: center; padding: 32px;
+    position: relative; overflow: hidden;
+  }
+  .img-placeholder::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      -45deg,
+      transparent, transparent 10px,
+      rgba(229, 231, 235, 0.3) 10px, rgba(229, 231, 235, 0.3) 11px
+    );
+  }
+  .img-placeholder-inner { position: relative; z-index: 1; }
+  .img-placeholder .ip-title { font-size: 0.9rem; font-weight: 600; color: #374151; margin-bottom: 6px; }
+  .img-placeholder .ip-sub { font-size: 0.78rem; color: #9ca3af; max-width: 320px; line-height: 1.6; }
+  .img-placeholder .ip-icon { font-size: 2rem; margin-bottom: 10px; opacity: 0.4; }
+
+  /* ===== USER-INSERTED SUBJECTIVE IMAGES ===== */
   .user-image-block {
     margin-bottom: 40px;
   }
@@ -372,26 +394,6 @@
   .user-image-caption {
     font-size: 0.78rem; color: #9ca3af; text-align: center; margin-top: 4px;
   }
-
-  /* ===== INLINE IMAGES in results ===== */
-  .img-placeholder {
-    background: #f9fafb; border: 2px dashed #e5e7eb; border-radius: 10px;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    min-height: 180px; margin-bottom: 28px; text-align: center; padding: 32px;
-    position: relative; overflow: hidden;
-  }
-  .img-placeholder::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-    background: repeating-linear-gradient(
-      -45deg,
-      transparent, transparent 10px,
-      rgba(229, 231, 235, 0.3) 10px, rgba(229, 231, 235, 0.3) 11px
-    );
-  }
-  .img-placeholder-inner { position: relative; z-index: 1; }
-  .img-placeholder .ip-title { font-size: 0.9rem; font-weight: 600; color: #374151; margin-bottom: 6px; }
-  .img-placeholder .ip-sub { font-size: 0.78rem; color: #9ca3af; max-width: 320px; line-height: 1.6; }
-  .img-placeholder .ip-icon { font-size: 2rem; margin-bottom: 10px; opacity: 0.4; }
 
   @media (max-width: 768px) {
     .container { padding: 0 20px; }
@@ -515,7 +517,7 @@
       </div>
       <div class="card">
         <h3>Gradient Interference</h3>
-        <p>Jointly optimizing heterogeneous objectives (text rendering, aesthetic quality, human preference) within shared parameters causes divergent gradients to conflict (&lang;&nabla;<sub>&theta;</sub> J<sub>k</sub>, &nabla;<sub>&theta;</sub> J<sub>1</sub>&rang; &lt; 0), producing a zero-sum seesaw effect.</p>
+        <p>Jointly optimizing heterogeneous objectives (text rendering, aesthetic quality, human preference) within shared parameters causes divergent gradients to conflict ($\langle \nabla_\theta J_k, \nabla_\theta J_1\rangle < 0$), producing a zero-sum seesaw effect.</p>
         <span class="card-tag">Catastrophic Forgetting</span>
       </div>
       <div class="card">
@@ -588,25 +590,25 @@
       <div class="step-card">
         <div class="step-num">03</div>
         <h3>Multi-Teacher Dense Labeling</h3>
-        <p>Each teacher acts as a <strong>Generative Reward Model (GRM)</strong>, returning a full vector field v<sub>&phi;k</sub> rather than a scalar. Dynamic routing &alpha;<sub>k</sub> selects domain experts.</p>
+        <p>Each teacher acts as a <strong>Generative Reward Model (GRM)</strong>, returning a full vector field $v_{\phi_k}$ rather than a scalar. Dynamic routing $\alpha_k$ selects domain experts.</p>
       </div>
       <div class="step-card">
         <div class="step-num">04</div>
         <h3>KL Reward + PPO Clipping</h3>
-        <p>Shared isotropic covariance reduces KL divergence to an <strong>L<sub>2</sub> vector field distance</strong>. PPO-style clipping stabilizes training against reward exploitation.</p>
+        <p>Shared isotropic covariance reduces KL divergence to an <strong>$L_2$ vector field distance</strong>. PPO-style clipping stabilizes training against reward exploitation.</p>
       </div>
     </div>
 
-    <!-- Core Formulas -->
+    <!-- Core Formulas (KaTeX) -->
     <div class="formula-block reveal" style="margin-top: 16px;">
       <div class="ftitle">Flow Matching Formulation</div>
       <div class="formula-group">
         <span class="fc">Probability flow ODE (deterministic):&nbsp;&nbsp;</span>
-        dx<sub>t</sub>/dt = v<sub>&theta;</sub>(x<sub>t</sub>, t, c)
+        $$\frac{d x_t}{dt} = v_\theta(x_t, t, c)$$
       </div>
       <div class="formula-group">
         <span class="fc">Stochastic sampling (SDE) for on-policy exploration:&nbsp;&nbsp;</span>
-        dx<sub>t</sub> = [ v<sub>&theta;</sub>(x<sub>t</sub>, t) &minus; ((1&minus;t)x<sub>t</sub>)/(2t) ] dt + &sigma;<sub>t</sub> dw
+        $$dx_t = \Big[ v_\theta(x_t, t) - \frac{(1-t)x_t}{2t} \Big] dt + \sigma_t \, dw$$
       </div>
     </div>
 
@@ -614,23 +616,23 @@
       <div class="ftitle">Multi-Teacher Dense Supervision</div>
       <div class="formula-group">
         <span class="fc">GRM aggregation:&nbsp;&nbsp;</span>
-        v<sub>target</sub>(x<sub>t</sub>, t, c) = &sum;<sub>k=1</sub><sup>K</sup> &alpha;<sub>k</sub>(c, x<sub>t</sub>) &sdot; v<sub>&phi;k</sub>(x<sub>t</sub>, t, c)
+        $$v_{\text{target}}(x_t, t, c) = \sum_{k=1}^{K} \alpha_k(c, x_t) \cdot v_{\phi_k}(x_t, t, c)$$
       </div>
       <div class="formula-group">
-        <span class="fc">Dense reward (vector field L<sub>2</sub> distance):&nbsp;&nbsp;</span>
-        r<sub>t</sub><sup>(i)</sup> = &minus;w(t) &sdot; &parallel; v&#772;<sub>&theta;</sub>(x<sub>t</sub><sup>(i)</sup>, t, c) &minus; v<sub>target</sub>(x<sub>t</sub><sup>(i)</sup>, t, c) &parallel;<sub>2</sub><sup>2</sup>
+        <span class="fc">Dense reward (vector field $L_2$ distance):&nbsp;&nbsp;</span>
+        $$r_t^{(i)} = -w(t) \cdot \big\| \bar{v}_\theta(x_t^{(i)}, t, c) - v_{\text{target}}(x_t^{(i)}, t, c) \big\|_2^2$$
       </div>
     </div>
 
     <div class="formula-block reveal">
-      <div class="ftitle">KL Divergence as L<sub>2</sub> Distance</div>
+      <div class="ftitle">KL Divergence as $L_2$ Distance</div>
       <div class="formula-group">
-        <span class="fc">Shared isotropic covariance &sigma;<sub>t</sub><sup>2</sup> &Delta;t reduces KL analytically to:&nbsp;&nbsp;</span>
-        D<sub>KL</sub>(&pi;<sub>&theta;</sub> &par; &pi;<sub>target</sub>) = (&Delta;t)/2 &sdot; &parallel; v<sub>&theta;</sub> &minus; v<sub>target</sub> &parallel;<sub>2</sub><sup>2</sup>
+        <span class="fc">Shared isotropic covariance $\sigma_t^2 \Delta t \, I$ reduces KL analytically to:&nbsp;&nbsp;</span>
+        $$D_{\text{KL}}(\pi_\theta \, \| \, \pi_{\text{target}}) = \frac{\Delta t}{2} \cdot \big\| v_\theta - v_{\text{target}} \big\|_2^2$$
       </div>
       <div class="formula-group">
         <span class="fc">PPO clipped surrogate objective:&nbsp;&nbsp;</span>
-        J(&theta;) &approx; (1/BG) &sum; min( &rho;<sub>t,i,j</sub>(&theta;) &sdot; r<sub>t,i,j</sub><sup>OPD</sup>, clip(&rho;<sub>t,i,j</sub>(&theta;), 1&minus;&epsilon;, 1+&epsilon;) &sdot; r<sub>t,i,j</sub><sup>OPD</sup> )
+        $$J(\theta) \approx \frac{1}{BG} \sum \min\!\Big( \rho_{t,i,j}(\theta) \cdot r_{t,i,j}^{\text{OPD}},\; \mathrm{clip}(\rho_{t,i,j}(\theta), 1-\epsilon, 1+\epsilon) \cdot r_{t,i,j}^{\text{OPD}} \Big)$$
       </div>
     </div>
 
@@ -646,7 +648,7 @@
         <div class="ftitle">Total Loss</div>
         <div class="formula-group">
           <span class="fc">KL regularization:&nbsp;&nbsp;</span>
-          L<sub>Total</sub>(&theta;) = L<sub>Policy</sub>(&theta;) + &lambda; &sdot; E<sub>c, t, x<sub>t</sub> &sim; &rho;<sub>t</sub><sup>&theta;</sup></sub>[ w(t) &sdot; &parallel; v<sub>&theta;</sub>(x<sub>t</sub>, t, c) &minus; v<sub>aesthetic</sub>(x<sub>t</sub>, t, c) &parallel;<sub>2</sub><sup>2</sup> ]
+          $$\mathcal{L}_{\text{Total}}(\theta) = \mathcal{L}_{\text{Policy}}(\theta) + \lambda \cdot \mathbb{E}_{c,\, t,\, x_t \sim \rho_t^\theta}\Big[ w(t) \cdot \big\| v_\theta(x_t, t, c) - v_{\text{aesthetic}}(x_t, t, c) \big\|_2^2 \Big]$$
         </div>
       </div>
       <p>
@@ -712,7 +714,7 @@
               <td>GRPO-Mix (GenEval:OCR:PickScore=3:1:1)</td>
               <td>0.73</td><td>0.83</td><td>4.33</td><td>21.84</td><td>0.82</td>
             </tr>
-            <tr class="sep-row"><td colspan="5">Flow-OPD (Ours)</td></tr>
+            <tr class="sep-row"><td colspan="6">Flow-OPD (Ours)</td></tr>
             <tr>
               <td>Ours &mdash; SFT Init</td>
               <td>0.91</td><td>0.92</td><td>4.29</td><td>21.83</td><td>0.88</td>
@@ -752,6 +754,7 @@
         </div>
       </div>
 
+      <!-- Image placeholder: qualitative comparison -->
       <div class="img-placeholder">
         <div class="img-placeholder-inner">
           <div class="ip-icon">&#128247;</div>
@@ -830,6 +833,7 @@
         </div>
       </div>
 
+      <!-- Image placeholder: cold start visualization -->
       <div class="img-placeholder">
         <div class="img-placeholder-inner">
           <div class="ip-icon">&#128200;</div>
@@ -916,6 +920,7 @@
         </div>
       </div>
 
+      <!-- Image placeholder: MAR visualization -->
       <div class="img-placeholder">
         <div class="img-placeholder-inner">
           <div class="ip-icon">&#127912;</div>
@@ -935,32 +940,34 @@
       </div>
     </div>
 
-    <!-- ===== 4. USER-INSERTED IMAGE #1 ===== -->
-    <div class="sub-result reveal">
+    <!-- ===== SUBJECTIVE IMAGE #1 ===== -->
+    <div class="user-image-block reveal">
       <div class="user-image-label">Subjective Image 1</div>
-      <!-- Replace the placeholder below with your own image: -->
-      <!-- <img class="user-image-real" src="your-image-1.png" alt="Description of your image" />
-           <p class="user-image-caption">Caption for your image</p> -->
+      <!-- To insert your image, uncomment the lines below and replace the paths:
+      <img class="user-image-real" src="your-image-1.png" alt="Description of your image" />
+      <p class="user-image-caption">Caption for your image</p>
+      -->
       <div class="user-image-placeholder">
         <div class="user-image-placeholder-inner">
           <div class="ip-icon">&#128247;</div>
           <div class="ip-title">Subjective Image 1 (Replace Me)</div>
-          <div class="ip-sub">Uncomment the &lt;img&gt; tag in the HTML source and replace <code>your-image-1.png</code> with your image file path. Suggested size: 1200&times;600px.</div>
+          <div class="ip-sub">Uncomment the <code>&lt;img&gt;</code> tag in the HTML source and replace <code>your-image-1.png</code> with your image file path. Suggested size: 1200&times;600px.</div>
         </div>
       </div>
     </div>
 
-    <!-- ===== 5. USER-INSERTED IMAGE #2 ===== -->
-    <div class="sub-result reveal">
+    <!-- ===== SUBJECTIVE IMAGE #2 ===== -->
+    <div class="user-image-block reveal">
       <div class="user-image-label">Subjective Image 2</div>
-      <!-- Replace the placeholder below with your own image: -->
-      <!-- <img class="user-image-real" src="your-image-2.png" alt="Description of your image" />
-           <p class="user-image-caption">Caption for your image</p> -->
+      <!-- To insert your image, uncomment the lines below and replace the paths:
+      <img class="user-image-real" src="your-image-2.png" alt="Description of your image" />
+      <p class="user-image-caption">Caption for your image</p>
+      -->
       <div class="user-image-placeholder">
         <div class="user-image-placeholder-inner">
           <div class="ip-icon">&#127912;</div>
           <div class="ip-title">Subjective Image 2 (Replace Me)</div>
-          <div class="ip-sub">Uncomment the &lt;img&gt; tag in the HTML source and replace <code>your-image-2.png</code> with your image file path. Suggested size: 1200&times;600px.</div>
+          <div class="ip-sub">Uncomment the <code>&lt;img&gt;</code> tag in the HTML source and replace <code>your-image-2.png</code> with your image file path. Suggested size: 1200&times;600px.</div>
         </div>
       </div>
     </div>
@@ -1126,6 +1133,7 @@
 
 <!-- ===== SCRIPTS ===== -->
 <script>
+  // Scroll reveal
   const reveals = document.querySelectorAll('.reveal');
   const observer = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
@@ -1134,8 +1142,9 @@
   }, { threshold: 0.08, rootMargin: '0px 0px -30px 0px' });
   reveals.forEach(el => observer.observe(el));
 
+  // Copy citation
   function copyCitation() {
-    const text = `@article{flowopd2026{
+    const text = `@article{flowopd2026,
   title = {Flow-OPD: On-Policy Distillation for Flow Matching Models},
   author = {Zhen Fang and Wenxuan Huang and Yu Zeng and Yiming Zhao
             and Shuang Chen and Kaituo Feng and Yunlong Lin and Jie Liu
@@ -1151,10 +1160,24 @@
     });
   }
 
+  // Smooth scroll
   document.querySelectorAll('a[href^="#"]').forEach(a => {
     a.addEventListener('click', e => {
       const tgt = document.querySelector(a.getAttribute('href'));
       if (tgt) { e.preventDefault(); tgt.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    });
+  });
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    renderMathInElement(document.body, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false},
+      ],
+      throwOnError: false
     });
   });
 </script>
