@@ -1,0 +1,1130 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Flow-OPD: On-Policy Distillation for Flow Matching Models</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<style>
+  /* ===== RESET & BASE ===== */
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #ffffff;
+    color: #1c1c1c;
+    line-height: 1.75;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  h1, h2, h3 { font-family: 'Source Serif 4', Georgia, serif; line-height: 1.25; }
+  a { color: #4f46e5; text-decoration: none; }
+  a:hover { color: #3730a3; }
+
+  /* ===== LAYOUT ===== */
+  .container { max-width: 900px; margin: 0 auto; padding: 0 32px; }
+  .container.wide { max-width: 1100px; }
+
+  /* ===== NAV ===== */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(255, 255, 255, 0.95);
+    border-bottom: 1px solid #e5e7eb;
+    backdrop-filter: blur(12px);
+  }
+  nav .container {
+    display: flex; align-items: center; justify-content: space-between;
+    height: 56px;
+  }
+  .nav-logo {
+    font-family: 'Source Serif 4', Georgia, serif;
+    font-weight: 700; font-size: 1.05rem;
+    color: #1c1c1c;
+    letter-spacing: -0.3px;
+  }
+  .nav-links { display: flex; gap: 32px; list-style: none; }
+  .nav-links a { color: #6b7280; font-size: 0.875rem; font-weight: 500; transition: color 0.15s; }
+  .nav-links a:hover { color: #1c1c1c; }
+
+  /* ===== HERO ===== */
+  .hero { padding: 120px 0 72px; background: #ffffff; }
+
+  .hero-meta {
+    display: flex; align-items: center; gap: 10px; margin-bottom: 20px;
+  }
+  .venue-badge {
+    display: inline-flex; align-items: center;
+    padding: 4px 12px; border-radius: 4px;
+    background: #eef2ff; color: #4f46e5;
+    font-size: 0.78rem; font-weight: 600;
+    letter-spacing: 0.3px;
+  }
+
+  .hero h1 {
+    font-size: clamp(1.9rem, 4vw, 2.9rem);
+    font-weight: 700; color: #0f0f0f;
+    letter-spacing: -0.5px; margin-bottom: 16px;
+    line-height: 1.2;
+  }
+  .hero h1 em {
+    font-style: normal; color: #4f46e5;
+  }
+
+  .hero-authors {
+    font-size: 0.88rem; color: #4b5563; margin-bottom: 8px;
+    line-height: 1.8;
+  }
+  .hero-authors a { color: #4f46e5; font-weight: 500; }
+  .hero-authors a:hover { color: #3730a3; }
+  .hero-authors .supers {
+    font-size: 0.72rem; color: #9ca3af; vertical-align: super;
+    font-weight: 400;
+  }
+  .hero-authors .supers a { color: #9ca3af; }
+  .hero-authors .supers a:hover { color: #4f46e5; }
+  .hero-affil {
+    font-size: 0.75rem; color: #9ca3af; margin-bottom: 24px; line-height: 1.7;
+  }
+  .hero-affil strong { color: #6b7280; font-weight: 600; }
+
+  .hero-abstract {
+    font-size: 1rem; color: #374151; line-height: 1.8;
+    max-width: 760px; margin-bottom: 32px;
+    padding-left: 16px; border-left: 3px solid #4f46e5;
+  }
+
+  .hero-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 9px 18px; border-radius: 7px; font-size: 0.875rem;
+    font-weight: 600; transition: all 0.15s; border: none; cursor: pointer;
+    text-decoration: none;
+  }
+  .btn-primary { background: #4f46e5; color: #fff; }
+  .btn-primary:hover { background: #3730a3; color: #fff; transform: translateY(-1px); }
+  .btn-outline { background: #fff; color: #374151; border: 1px solid #d1d5db; }
+  .btn-outline:hover { border-color: #4f46e5; color: #4f46e5; transform: translateY(-1px); }
+  .btn-disabled, .btn-disabled:hover {
+    background: #f3f4f6; color: #9ca3af; border-color: #d1d5db;
+    cursor: not-allowed; transform: none !important;
+  }
+  .btn-ghost { background: #f3f4f6; color: #374151; border: 1px solid #e5e7eb; }
+  .btn-ghost:hover { background: #eef2ff; border-color: #c7d2fe; color: #4f46e5; }
+
+  /* ===== SECTIONS ===== */
+  .section-divider { height: 1px; background: #f3f4f6; }
+  section { padding: 72px 0; }
+  section.alt { background: #fafafa; }
+
+  .section-label {
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 2px; text-transform: uppercase;
+    color: #9ca3af; margin-bottom: 10px;
+    font-family: 'Inter', sans-serif;
+  }
+  .section-title {
+    font-size: 1.6rem; font-weight: 700; color: #0f0f0f;
+    margin-bottom: 12px; letter-spacing: -0.3px;
+  }
+  .section-intro {
+    font-size: 0.95rem; color: #6b7280; max-width: 680px;
+    margin-bottom: 36px; line-height: 1.8;
+  }
+
+  /* ===== PROBLEM / ABSTRACT CARDS ===== */
+  .card-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 16px; margin-bottom: 0;
+  }
+  .card {
+    background: #fff; border: 1px solid #e5e7eb;
+    border-radius: 10px; padding: 22px 24px;
+    transition: box-shadow 0.2s;
+  }
+  .card:hover { box-shadow: 0 4px 16px rgba(0,0,0,0.06); }
+  .card h3 { font-size: 0.95rem; font-weight: 700; color: #1c1c1c; margin-bottom: 8px; }
+  .card p { font-size: 0.85rem; color: #6b7280; line-height: 1.7; }
+  .card .card-tag {
+    display: inline-block; margin-top: 10px; font-size: 0.7rem;
+    font-weight: 600; color: #4f46e5;
+    background: #eef2ff; padding: 2px 8px; border-radius: 4px;
+  }
+
+  /* ===== METHOD SECTION ===== */
+  .method-pipeline {
+    display: flex; align-items: stretch; gap: 0;
+    margin-bottom: 36px; overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .pipeline-step {
+    display: flex; flex-direction: column; align-items: center;
+    min-width: 150px; flex: 1;
+  }
+  .pipeline-node {
+    background: #f9fafb; border: 1px solid #e5e7eb;
+    border-radius: 8px; padding: 12px 16px;
+    text-align: center; width: 100%; margin-bottom: 6px;
+  }
+  .pipeline-node.p-base { border-color: #d1d5db; color: #9ca3af; font-size: 0.8rem; font-weight: 600; }
+  .pipeline-node.p-s1 { border-color: #c7d2fe; color: #4f46e5; background: #eef2ff; font-size: 0.8rem; font-weight: 600; }
+  .pipeline-node.p-s2 { border-color: #a5f3fc; color: #0891b2; background: #ecfeff; font-size: 0.8rem; font-weight: 600; }
+  .pipeline-node.p-out { border-color: #fde68a; color: #b45309; background: #fffbeb; font-size: 0.8rem; font-weight: 600; }
+  .pipeline-node.p-teacher { border-color: #6ee7b7; color: #047857; background: #ecfdf5; font-size: 0.75rem; font-weight: 600; }
+  .pipeline-label { font-size: 0.68rem; color: #9ca3af; text-align: center; margin-bottom: 4px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+  .pipeline-sublabel { font-size: 0.65rem; color: #9ca3af; text-align: center; margin-bottom: 4px; }
+  .pipeline-arrow { display: flex; align-items: center; padding: 0 6px; color: #d1d5db; font-size: 1.2rem; flex-shrink: 0; }
+  .pipeline-teacher-row { display: flex; flex-direction: column; gap: 4px; width: 100%; }
+
+  /* ===== METHOD CARDS ===== */
+  .step-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px;
+  }
+  .step-card {
+    background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 18px 20px;
+  }
+  .step-num {
+    font-family: 'JetBrains Mono', monospace; font-size: 0.68rem; font-weight: 500;
+    color: #0891b2; margin-bottom: 8px;
+    background: #ecfeff; border: 1px solid #a5f3fc;
+    padding: 2px 8px; border-radius: 4px; display: inline-block;
+  }
+  .step-card h3 { font-size: 0.88rem; font-weight: 700; color: #1c1c1c; margin-bottom: 8px; }
+  .step-card p { font-size: 0.8rem; color: #6b7280; line-height: 1.65; }
+
+  /* ===== FORMULA BLOCK ===== */
+  .formula-block {
+    background: #f9fafb; border: 1px solid #e5e7eb;
+    border-radius: 8px; padding: 18px 22px; margin: 10px 0;
+    font-size: 0.875rem; line-height: 1.8;
+  }
+  .formula-block + .formula-block {
+    border-top: 1px dashed #d1d5db;
+    border-radius: 0 0 8px 8px;
+    margin-top: -1px;
+  }
+  .formula-block:first-of-type { border-radius: 8px 8px 0 0; }
+  .formula-block:last-of-type { border-radius: 0 0 8px 8px; }
+  .formula-block:only-of-type { border-radius: 8px; }
+  .formula-block .ftitle {
+    font-size: 0.68rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+    color: #9ca3af; margin-bottom: 10px; font-family: 'Inter', sans-serif;
+  }
+  .formula-block .formula-group { margin-bottom: 12px; }
+  .formula-block .formula-group:last-child { margin-bottom: 0; }
+  .formula-block .fc { color: #9ca3af; font-style: italic; }
+  .katex { font-size: 1em !important; }
+
+  /* ===== MAR BOX ===== */
+  .mar-box {
+    background: #fafafa; border: 1px solid #e5e7eb; border-left: 3px solid #4f46e5;
+    border-radius: 10px; padding: 24px 28px; margin: 20px 0;
+  }
+  .mar-box h3 { font-size: 1rem; font-weight: 700; color: #1c1c1c; margin-bottom: 10px; }
+  .mar-box p { font-size: 0.875rem; color: #4b5563; line-height: 1.75; }
+  .mar-box p + p { margin-top: 10px; }
+  .mar-box strong { color: #1c1c1c; }
+
+  /* ===== RESULTS ===== */
+  .results-card {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 10px;
+    overflow: hidden; margin-bottom: 28px;
+  }
+  .results-card-header {
+    padding: 14px 20px; background: #f9fafb; border-bottom: 1px solid #e5e7eb;
+    font-size: 0.8rem; font-weight: 700; color: #374151; letter-spacing: 0.3px;
+  }
+
+  .results-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+  .results-table th {
+    padding: 11px 14px; text-align: left; font-weight: 600; font-size: 0.78rem;
+    color: #6b7280; background: #fafafa; border-bottom: 1px solid #e5e7eb;
+    white-space: nowrap;
+  }
+  .results-table td { padding: 10px 14px; border-bottom: 1px solid #f3f4f6; color: #374151; }
+  .results-table tr:last-child td { border-bottom: none; }
+  .results-table tr:hover td { background: #f9fafb; }
+  .results-table .best { color: #047857; font-weight: 700; }
+  .results-table .our-row td { background: #f0fdf4; color: #1c1c1c; font-weight: 600; }
+  .results-table .base-row td { color: #9ca3af; }
+  .results-table .sep-row td { background: #fafafa; padding: 4px 14px; font-size: 0.72rem; color: #9ca3af; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+
+  /* ===== METRIC ROW ===== */
+  .metric-row {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px;
+    margin-bottom: 28px;
+  }
+  .metric-item {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px 18px;
+  }
+  .metric-item .mlabel { font-size: 0.75rem; color: #9ca3af; font-weight: 600; margin-bottom: 6px; }
+  .metric-item .mvalues { display: flex; justify-content: space-between; align-items: baseline; }
+  .metric-item .mbase { font-size: 0.8rem; color: #9ca3af; }
+  .metric-item .mours { font-size: 0.95rem; font-weight: 700; color: #047857; }
+  .metric-item .mdelta { font-size: 0.72rem; color: #059669; margin-top: 2px; }
+  .metric-item .mbar { height: 4px; background: #f3f4f6; border-radius: 999px; margin-top: 8px; overflow: hidden; }
+  .metric-item .mbar-fill { height: 100%; background: #4f46e5; border-radius: 999px; }
+
+  /* ===== IMAGE PLACEHOLDER ===== */
+  .img-placeholder {
+    background: #f9fafb; border: 2px dashed #e5e7eb; border-radius: 10px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    min-height: 180px; margin-bottom: 28px; text-align: center; padding: 32px;
+    position: relative; overflow: hidden;
+  }
+  .img-placeholder::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      -45deg,
+      transparent, transparent 10px,
+      rgba(229, 231, 235, 0.3) 10px, rgba(229, 231, 235, 0.3) 11px
+    );
+  }
+  .img-placeholder-inner { position: relative; z-index: 1; }
+  .img-placeholder .ip-title { font-size: 0.9rem; font-weight: 600; color: #374151; margin-bottom: 6px; }
+  .img-placeholder .ip-sub { font-size: 0.78rem; color: #9ca3af; max-width: 320px; line-height: 1.6; }
+  .img-placeholder .ip-icon { font-size: 2rem; margin-bottom: 10px; opacity: 0.4; }
+
+  /* ===== SUB-RESULT SECTIONS ===== */
+  .sub-result { margin-bottom: 40px; }
+  .sub-result-label {
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+    color: #9ca3af; margin-bottom: 14px; padding-bottom: 8px;
+    border-bottom: 1px solid #f3f4f6;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .sub-result-label::before {
+    content: ''; width: 3px; height: 14px; background: #4f46e5; border-radius: 2px;
+  }
+  .insight-box {
+    background: #fff; border: 1px solid #e5e7eb; border-left: 3px solid #4f46e5;
+    border-radius: 10px; padding: 20px 24px; margin-bottom: 28px;
+  }
+  .insight-box h4 { font-size: 0.9rem; font-weight: 700; color: #1c1c1c; margin-bottom: 8px; }
+  .insight-box p { font-size: 0.85rem; color: #4b5563; line-height: 1.75; }
+  .insight-box strong { color: #1c1c1c; }
+
+  .stat-row {
+    display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 20px;
+  }
+  .stat-item {
+    background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px;
+    padding: 14px 20px; flex: 1; min-width: 140px;
+  }
+  .stat-item .stat-label { font-size: 0.72rem; color: #9ca3af; font-weight: 600; margin-bottom: 4px; }
+  .stat-item .stat-value { font-size: 1.1rem; font-weight: 700; color: #047857; }
+  .stat-item .stat-note { font-size: 0.72rem; color: #9ca3af; margin-top: 2px; }
+
+  /* ===== ANALYSIS ===== */
+  .analysis-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 16px;
+  }
+  .analysis-card {
+    background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 22px 24px;
+  }
+  .analysis-card h3 { font-size: 0.9rem; font-weight: 700; color: #1c1c1c; margin-bottom: 8px; }
+  .analysis-card p { font-size: 0.82rem; color: #6b7280; line-height: 1.7; }
+
+  /* ===== RELATED ===== */
+  .related-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px;
+  }
+  .related-card {
+    background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 18px 20px;
+  }
+  .related-card h4 { font-size: 0.85rem; font-weight: 700; color: #1c1c1c; margin-bottom: 8px; }
+  .related-card p { font-size: 0.78rem; color: #6b7280; line-height: 1.65; margin-bottom: 10px; }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 4px; }
+  .chip {
+    font-size: 0.68rem; padding: 2px 7px; border-radius: 4px;
+    background: #fff; border: 1px solid #e5e7eb; color: #9ca3af;
+  }
+
+  /* ===== LIMITATIONS ===== */
+  .lim-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin-bottom: 28px; }
+  .lim-card { background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 18px 22px; }
+  .lim-card h4 { font-size: 0.88rem; font-weight: 700; color: #92400e; margin-bottom: 6px; }
+  .lim-card p { font-size: 0.8rem; color: #78350f; line-height: 1.7; }
+  .future-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+  .future-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px; padding: 18px 22px; }
+  .future-card h4 { font-size: 0.85rem; font-weight: 700; color: #1c1c1c; margin-bottom: 6px; }
+  .future-card p { font-size: 0.78rem; color: #6b7280; line-height: 1.65; }
+
+  /* ===== CITATION ===== */
+  .citation-block {
+    background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 10px;
+    padding: 20px 24px; font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem; color: #4b5563; line-height: 1.8;
+    overflow-x: auto; white-space: pre-wrap; word-break: break-all;
+  }
+
+  /* ===== FOOTER ===== */
+  footer { background: #f9fafb; border-top: 1px solid #e5e7eb; padding: 32px 0; }
+  .footer-inner {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 12px;
+  }
+  .footer-logo { font-family: 'Source Serif 4', Georgia, serif; font-weight: 700; font-size: 0.95rem; color: #1c1c1c; }
+  .footer-copy { font-size: 0.78rem; color: #9ca3af; }
+
+  /* ===== REVEAL ===== */
+  .reveal { opacity: 0; transform: translateY(14px); transition: opacity 0.5s ease, transform 0.5s ease; }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+
+  /* ===== RESPONSIVE ===== */
+  @media (max-width: 768px) {
+    .container { padding: 0 20px; }
+    .nav-links { display: none; }
+    .hero { padding: 100px 0 56px; }
+    section { padding: 56px 0; }
+    .method-pipeline { flex-direction: column; }
+    .pipeline-arrow { transform: rotate(90deg); padding: 6px 0; }
+    .footer-inner { flex-direction: column; text-align: center; }
+    .stat-row { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ===== NAV ===== -->
+<nav>
+  <div class="container">
+    <div class="nav-logo">Flow-OPD</div>
+    <ul class="nav-links">
+      <li><a href="#abstract">Abstract</a></li>
+      <li><a href="#method">Method</a></li>
+      <li><a href="#results">Results</a></li>
+      <li><a href="#analysis">Analysis</a></li>
+      <li><a href="#related">Related</a></li>
+      <li><a href="#citation">Citation</a></li>
+    </ul>
+  </div>
+</nav>
+
+<!-- ===== HERO ===== -->
+<section class="hero">
+  <div class="container">
+    <div class="hero-meta">
+      <span class="venue-badge">Flow Matching</span>
+      <span style="font-size:0.75rem;color:#9ca3af;">&middot;</span>
+      <span class="venue-badge" style="background:#ecfdf5;color:#047857;">On-Policy Distillation</span>
+    </div>
+
+    <h1><em>Flow-OPD</em>: On-Policy Distillation for Flow Matching Models</h1>
+
+    <div class="hero-authors">
+      <a href="mailto:fazii@mail.ustc.edu.cn">Zhen Fang</a><span class="supers"><a href="#">1*</a></span>
+      &nbsp;&nbsp;&middot;&nbsp;&nbsp;
+      <a href="mailto:wxhuang@gmail.com">Wenxuan Huang</a><span class="supers"><a href="#">2*&#8224;</a></span>
+      &nbsp;&nbsp;&middot;&nbsp;&nbsp;
+      <a href="#">Yu Zeng</a><span class="supers"><a href="#">1</a></span>
+      &nbsp;&nbsp;&middot;&nbsp;&nbsp;
+      <a href="#">Yiming Zhao</a><span class="supers"><a href="#">1</a></span>
+      &nbsp;&nbsp;&middot;&nbsp;&nbsp;
+      <a href="#">Shuang Chen</a><span class="supers"><a href="#">3</a></span>
+      &nbsp;&nbsp;&middot;&nbsp;&nbsp;
+      <a href="#">Kaituo Feng</a><span class="supers"><a href="#">4</a></span>
+      &nbsp;&nbsp;&middot;&nbsp;&nbsp;
+      <a href="#">Yunlong Lin</a><span class="supers"><a href="#">4</a></span>
+      &nbsp;&nbsp;&middot;&nbsp;&nbsp;
+      <a href="#">Jie Liu</a><span class="supers"><a href="#">4</a></span>
+      &nbsp;&nbsp;&middot;&nbsp;&nbsp;
+      <a href="#">Lin Chen</a><span class="supers"><a href="#">1</a></span>
+      &nbsp;&nbsp;&middot;&nbsp;&nbsp;
+      <a href="#">Zehui Chen</a><span class="supers"><a href="#">1</a></span>
+      &nbsp;&nbsp;&middot;&nbsp;&nbsp;
+      <a href="#">Shaosheng Cao</a><span class="supers"><a href="#">5&#8224;</a></span>
+      &nbsp;&nbsp;&middot;&nbsp;&nbsp;
+      <a href="#">Feng Zhao</a><span class="supers"><a href="#">1</a></span>
+    </div>
+
+    <div class="hero-affil">
+      <strong><sup>1</sup>USTC</strong> &nbsp;&middot;&nbsp;
+      <strong><sup>2</sup>Project Leader</strong> &nbsp;&middot;&nbsp;
+      <strong><sup>3</sup>UCLA</strong> &nbsp;&middot;&nbsp;
+      <strong><sup>4</sup>CUHK</strong> &nbsp;&middot;&nbsp;
+      <strong><sup>5</sup>Xiaohongshu</strong>
+      &nbsp;&nbsp;&nbsp; * Equal Contribution &nbsp;&nbsp; &#8224; Corresponding Author
+    </div>
+
+    <p class="hero-abstract">
+      We identify two critical bottlenecks in multi-task Flow Matching training: <strong>reward sparsity</strong>
+      and <strong>gradient interference</strong>. Flow-OPD integrates On-Policy Distillation into the
+      Flow Matching pipeline, replacing sparse scalar rewards with dense, trajectory-level, multi-teacher
+      vector field supervision. Evaluated on SD-3.5-Medium, Flow-OPD achieves <strong>+18pt average improvement</strong>
+      over vanilla GRPO and surpasses individual teacher models on OCR and DeQA.
+    </p>
+
+    <div class="hero-actions">
+      <a href="#abstract" class="btn btn-primary">Read More</a>
+      <span class="btn btn-outline btn-disabled" style="opacity:0.5;cursor:not-allowed;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+        Code &nbsp;<em style="font-size:0.7rem;">(coming soon)</em>
+      </span>
+      <a href="https://arxiv.org/abs/XXXX.XXXXX" target="_blank" class="btn btn-ghost">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+        Paper
+      </a>
+      <a href="https://huggingface.co/CostaliyA/Flow-OPD" target="_blank" class="btn btn-ghost">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg>
+        Model
+      </a>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ===== ABSTRACT ===== -->
+<section id="abstract">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">01 &mdash; Abstract</div>
+      <h2 class="section-title">Motivation: Why Multi-Task Flow Matching Fails</h2>
+      <p class="section-intro">
+        Standard GRPO works in single-task settings but catastrophically degrades in multi-task settings. We analyze the root causes and propose a principled solution.
+      </p>
+    </div>
+
+    <div class="card-grid reveal">
+      <div class="card">
+        <h3>Reward Sparsity</h3>
+        <p>Scalar-valued rewards (e.g., a single OCR accuracy score) compress high-dimensional image space into a single number. The model receives insufficient gradient signal to adjust thousands of dimensions simultaneously.</p>
+        <span class="card-tag">Information Bottleneck</span>
+      </div>
+      <div class="card">
+        <h3>Gradient Interference</h3>
+        <p>Jointly optimizing heterogeneous objectives (text rendering, aesthetic quality, human preference) within shared parameters causes divergent gradients to conflict ($\langle \nabla_\theta J_k, \nabla_\theta J_1\rangle < 0$), producing a zero-sum seesaw effect.</p>
+        <span class="card-tag">Catastrophic Forgetting</span>
+      </div>
+      <div class="card">
+        <h3>Flow-OPD Solution</h3>
+        <p>Replace sparse scalar rewards with dense, trajectory-level, multi-teacher vector field supervision. ~10pt average improvement over GRPO baseline; the unified student surpasses individual teachers in OCR and DeQA.</p>
+        <span class="card-tag">On-Policy Distillation</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ===== METHOD ===== -->
+<section class="alt" id="method">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">02 &mdash; Method</div>
+      <h2 class="section-title">Two-Stage Alignment Pipeline</h2>
+      <p class="section-intro">
+        Flow-OPD decouples expertise acquisition from model unification through a two-stage process:
+        Cold Start initialization followed by Multi-Teacher On-Policy Distillation.
+      </p>
+    </div>
+
+    <!-- Pipeline Diagram -->
+    <div class="method-pipeline reveal" style="margin-bottom: 32px;">
+      <div class="pipeline-step">
+        <div class="pipeline-label">Base Model</div>
+        <div class="pipeline-node p-base">SD-3.5-M</div>
+      </div>
+      <div class="pipeline-arrow">&#8594;</div>
+      <div class="pipeline-step">
+        <div class="pipeline-label">Stage 1: Cold Start</div>
+        <div class="pipeline-node p-s1">SFT Init</div>
+        <div class="pipeline-sublabel">or</div>
+        <div class="pipeline-node p-s1">Merge Init</div>
+      </div>
+      <div class="pipeline-arrow">&#8594;</div>
+      <div class="pipeline-step">
+        <div class="pipeline-label">Stage 2: OPD</div>
+        <div class="pipeline-node p-s2">Student &#9679;&#9679;&#9679;</div>
+        <div class="pipeline-label" style="margin-top:4px;">Teachers</div>
+        <div class="pipeline-teacher-row">
+          <div class="pipeline-node p-teacher">GenEval</div>
+          <div class="pipeline-node p-teacher">OCR</div>
+          <div class="pipeline-node p-teacher">DeQA</div>
+          <div class="pipeline-node p-teacher">PickScore</div>
+        </div>
+      </div>
+      <div class="pipeline-arrow">&#8594;</div>
+      <div class="pipeline-step">
+        <div class="pipeline-label">Output</div>
+        <div class="pipeline-node p-out">Unified Student</div>
+      </div>
+    </div>
+
+    <!-- Method Steps -->
+    <div class="step-grid reveal" style="margin-bottom: 28px;">
+      <div class="step-card">
+        <div class="step-num">01</div>
+        <h3>Cold Start Initialization</h3>
+        <p><strong>SFT-based</strong>: fine-tune student on teacher trajectories for stable starting point.<br><strong>Model Merging</strong>: superpose anisotropic teacher priors without training cost.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">02</div>
+        <h3>On-Policy Sampling (SDE)</h3>
+        <p>Convert the deterministic ODE into a <strong>SDE</strong> for stochastic exploration. Sample <em>G</em> trajectories per prompt to generate on-policy marginal distributions.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">03</div>
+        <h3>Multi-Teacher Dense Labeling</h3>
+        <p>Each teacher acts as a <strong>Generative Reward Model (GRM)</strong>, returning a full vector field $v_{\phi_k}$ rather than a scalar. Dynamic routing $\alpha_k$ selects domain experts.</p>
+      </div>
+      <div class="step-card">
+        <div class="step-num">04</div>
+        <h3>KL Reward + PPO Clipping</h3>
+        <p>Shared isotropic covariance reduces KL divergence to an <strong>$L_2$ vector field distance</strong>. PPO-style clipping stabilizes training against reward exploitation.</p>
+      </div>
+    </div>
+
+    <!-- Core Formulas (KaTeX) -->
+    <div class="formula-block reveal" style="margin-top: 16px;">
+      <div class="ftitle">Flow Matching Formulation</div>
+      <div class="formula-group">
+        <span class="fc">Probability flow ODE (deterministic):&nbsp;&nbsp;</span>
+        $$\frac{d x_t}{dt} = v_\theta(x_t, t, c)$$
+      </div>
+      <div class="formula-group">
+        <span class="fc">Stochastic sampling (SDE) for on-policy exploration:&nbsp;&nbsp;</span>
+        $$dx_t = \Big[ v_\theta(x_t, t) - \frac{(1-t)x_t}{2t} \Big] dt + \sigma_t \, dw$$
+      </div>
+    </div>
+
+    <div class="formula-block reveal">
+      <div class="ftitle">Multi-Teacher Dense Supervision</div>
+      <div class="formula-group">
+        <span class="fc">GRM aggregation:&nbsp;&nbsp;</span>
+        $$v_{\text{target}}(x_t, t, c) = \sum_{k=1}^{K} \alpha_k(c, x_t) \cdot v_{\phi_k}(x_t, t, c)$$
+      </div>
+      <div class="formula-group">
+        <span class="fc">Dense reward (vector field $L_2$ distance):&nbsp;&nbsp;</span>
+        $$r_t^{(i)} = -w(t) \cdot \big\| \bar{v}_\theta(x_t^{(i)}, t, c) - v_{\text{target}}(x_t^{(i)}, t, c) \big\|_2^2$$
+      </div>
+    </div>
+
+    <div class="formula-block reveal">
+      <div class="ftitle">KL Divergence as $L_2$ Distance</div>
+      <div class="formula-group">
+        <span class="fc">Shared isotropic covariance $\sigma_t^2 \Delta t \, I$ reduces KL analytically to:&nbsp;&nbsp;</span>
+        $$D_{\text{KL}}(\pi_\theta \, \| \, \pi_{\text{target}}) = \frac{\Delta t}{2} \cdot \big\| v_\theta - v_{\text{target}} \big\|_2^2$$
+      </div>
+      <div class="formula-group">
+        <span class="fc">PPO clipped surrogate objective:&nbsp;&nbsp;</span>
+        $$J(\theta) \approx \frac{1}{BG} \sum \min\!\Big( \rho_{t,i,j}(\theta) \cdot r_{t,i,j}^{\text{OPD}},\; \mathrm{clip}(\rho_{t,i,j}(\theta), 1-\epsilon, 1+\epsilon) \cdot r_{t,i,j}^{\text{OPD}} \Big)$$
+      </div>
+    </div>
+
+    <!-- MAR -->
+    <div class="mar-box reveal">
+      <h3>Manifold Anchor Regularization (MAR)</h3>
+      <p>
+        To prevent aesthetic degradation from aggressive functional optimization, Flow-OPD introduces a
+        <strong>task-agnostic aesthetic teacher</strong> (optimized via DeQA) providing full-data supervision.
+        The total loss combines the policy objective with a KL regularization term:
+      </p>
+      <div class="formula-block" style="margin: 12px 0 0;">
+        <div class="ftitle">Total Loss</div>
+        <div class="formula-group">
+          <span class="fc">KL regularization:&nbsp;&nbsp;</span>
+          $$\mathcal{L}_{\text{Total}}(\theta) = \mathcal{L}_{\text{Policy}}(\theta) + \lambda \cdot \mathbb{E}_{c,\, t,\, x_t \sim \rho_t^\theta}\Big[ w(t) \cdot \big\| v_\theta(x_t, t, c) - v_{\text{aesthetic}}(x_t, t, c) \big\|_2^2 \Big]$$
+        </div>
+      </div>
+      <p>
+        MAR resolves two failure modes of vanilla GRPO: <strong>(1)</strong> background mode collapse from overfitting to monotonous reward landscapes, and <strong>(2)</strong> semantic redundancy from coarse scalar reward granularity.
+      </p>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ===== RESULTS ===== -->
+<section id="results">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">03 &mdash; Results</div>
+      <h2 class="section-title">Experiments</h2>
+      <p class="section-intro">
+        Evaluated on SD-3.5-Medium across GenEval, OCR, DeQA, and PickScore. Training on 4&times;8 H800 GPUs (~50 hours).
+        We ablate the effect of Cold Start initialization and MAR independently.
+      </p>
+    </div>
+
+    <!-- ===== 1. OVERALL PERFORMANCE ===== -->
+    <div class="sub-result reveal">
+      <div class="sub-result-label">Overall Performance</div>
+
+      <div class="results-card">
+        <div class="results-card-header">Main Results &mdash; Multi-Task Alignment on SD-3.5-M</div>
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th>Model</th>
+              <th>GenEval &#8593;</th>
+              <th>OCR Acc. &#8593;</th>
+              <th>DeQA &#8593;</th>
+              <th>PickScore &#8593;</th>
+              <th>Average &#8593;</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="base-row">
+              <td>SD-3.5-M (base)</td>
+              <td>0.63</td><td>0.59</td><td>4.07</td><td>21.64</td><td>0.72</td>
+            </tr>
+            <tr>
+              <td>+ GRPO-GenEval</td>
+              <td>0.94</td><td>0.65</td><td>4.01</td><td>21.53</td><td>0.81</td>
+            </tr>
+            <tr>
+              <td>+ GRPO-OCR</td>
+              <td>0.64</td><td>0.92</td><td>4.06</td><td>21.69</td><td>0.80</td>
+            </tr>
+            <tr>
+              <td>+ GRPO-DeQA</td>
+              <td>0.64</td><td>0.66</td><td>4.23</td><td>23.02</td><td>0.76</td>
+            </tr>
+            <tr>
+              <td>+ GRPO-PickScore</td>
+              <td>0.51</td><td>0.69</td><td>4.22</td><td>23.19</td><td>0.73</td>
+            </tr>
+            <tr>
+              <td>GRPO-Mix (GenEval:OCR:PickScore=3:1:1)</td>
+              <td>0.73</td><td>0.83</td><td>4.33</td><td>21.84</td><td>0.82</td>
+            </tr>
+            <tr class="sep-row"><td colspan="6">Flow-OPD (Ours)</td></tr>
+            <tr>
+              <td>Ours &mdash; SFT Init</td>
+              <td>0.91</td><td>0.92</td><td>4.29</td><td>21.83</td><td>0.88</td>
+            </tr>
+            <tr class="our-row">
+              <td><strong>Ours &mdash; Merge Init</strong></td>
+              <td class="best"><strong>0.92</strong></td>
+              <td class="best"><strong>0.94</strong></td>
+              <td class="best"><strong>4.35</strong></td>
+              <td class="best"><strong>23.08</strong></td>
+              <td class="best"><strong>0.90</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="stat-row">
+        <div class="stat-item">
+          <div class="stat-label">Avg. Improvement</div>
+          <div class="stat-value">+18pt</div>
+          <div class="stat-note">vs. base SD-3.5-M</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">vs. GRPO-Mix</div>
+          <div class="stat-value">+8pt</div>
+          <div class="stat-note">best baseline</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">GenEval Gain</div>
+          <div class="stat-value">+29pt</div>
+          <div class="stat-note">0.63 &rarr; 0.92</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">OCR Gain</div>
+          <div class="stat-value">+35pt</div>
+          <div class="stat-note">0.59 &rarr; 0.94</div>
+        </div>
+      </div>
+
+      <!-- Image placeholder: qualitative comparison -->
+      <div class="img-placeholder">
+        <div class="img-placeholder-inner">
+          <div class="ip-icon">&#128247;</div>
+          <div class="ip-title">Qualitative Results: Multi-Task Comparison</div>
+          <div class="ip-sub">Place your generated image comparison here (e.g., GRPO-Mix vs. Flow-OPD on GenEval, OCR, and PickScore prompts). Suggested size: 1200&times;400px.</div>
+        </div>
+      </div>
+
+      <div class="insight-box">
+        <h4>Teacher-Surpassing Effect</h4>
+        <p>
+          The unified student outperforms individual teachers on some tasks: <strong>OCR 0.94 (student) vs. 0.92 (teacher)</strong>
+          and <strong>DeQA 4.35 (student) vs. 4.23 (teacher)</strong>. Simultaneous dense guidance from multiple experts forces the
+          student to learn a more holistic representation that bridges the epistemic gaps of single teachers.
+        </p>
+      </div>
+    </div>
+
+    <!-- ===== 2. COLD START ABLATION ===== -->
+    <div class="sub-result reveal">
+      <div class="sub-result-label">Ablation: Cold Start Initialization</div>
+      <p style="font-size:0.875rem;color:#6b7280;margin-bottom:16px;line-height:1.7;">
+        Both SFT and Model Merging provide effective cold-start foundations. Model Merging optimally leverages
+        homogeneous teacher priors without additional training cost, achieving the highest average score.
+      </p>
+
+      <div class="results-card">
+        <div class="results-card-header">Cold Start Comparison &mdash; T2I-CompBench (OOD Generalization)</div>
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th>Model</th>
+              <th>Color</th>
+              <th>Shape</th>
+              <th>3D-Spatial</th>
+              <th>Numeracy</th>
+              <th>Overall</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>GRPO-Mix</td>
+              <td>0.692</td><td>0.611</td><td>0.422</td><td>0.641</td><td>0.587</td>
+            </tr>
+            <tr>
+              <td>Cold Start (w/o OPD)</td>
+              <td>0.710</td><td>0.613</td><td>0.425</td><td>0.646</td><td>0.595</td>
+            </tr>
+            <tr class="our-row">
+              <td><strong>Flow-OPD (Merge Init)</strong></td>
+              <td class="best"><strong>0.719</strong></td>
+              <td class="best"><strong>0.629</strong></td>
+              <td class="best"><strong>0.457</strong></td>
+              <td class="best"><strong>0.684</strong></td>
+              <td class="best"><strong>0.618</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="metric-row">
+        <div class="metric-item">
+          <div class="mlabel">Shape</div>
+          <div class="mvalues"><span class="mbase">Base: 0.613</span><span class="mours">0.629 (+0.016)</span></div>
+          <div class="mbar"><div class="mbar-fill" style="width:62.9%;"></div></div>
+        </div>
+        <div class="metric-item">
+          <div class="mlabel">3D-Spatial</div>
+          <div class="mvalues"><span class="mbase">Base: 0.425</span><span class="mours">0.457 (+0.032)</span></div>
+          <div class="mbar"><div class="mbar-fill" style="width:45.7%;"></div></div>
+        </div>
+        <div class="metric-item">
+          <div class="mlabel">Numeracy</div>
+          <div class="mvalues"><span class="mbase">Base: 0.646</span><span class="mours">0.684 (+0.038)</span></div>
+          <div class="mbar"><div class="mbar-fill" style="width:68.4%;"></div></div>
+        </div>
+      </div>
+
+      <!-- Image placeholder: cold start visualization -->
+      <div class="img-placeholder">
+        <div class="img-placeholder-inner">
+          <div class="ip-icon">&#128200;</div>
+          <div class="ip-title">Cold Start Ablation: Training Curves</div>
+          <div class="ip-sub">Place a training curve or convergence plot here comparing SFT Init vs. Merge Init vs. from-scratch OPD across GenEval/OCR/DeQA. Suggested size: 900&times;320px.</div>
+        </div>
+      </div>
+
+      <div class="insight-box">
+        <h4>Model Merging vs. SFT</h4>
+        <p>
+          Model Merging superposes the anisotropic priors of divergent teachers into a unified parameter state,
+          positioning the student in a high-competence region of the loss landscape from the start &mdash;
+          no additional training cost. This consistently outperforms SFT Init across all OOD benchmarks.
+        </p>
+      </div>
+    </div>
+
+    <!-- ===== 3. MAR ABLATION ===== -->
+    <div class="sub-result reveal">
+      <div class="sub-result-label">Ablation: Manifold Anchor Regularization (MAR)</div>
+      <p style="font-size:0.875rem;color:#6b7280;margin-bottom:16px;line-height:1.7;">
+        MAR prevents reward hacking by anchoring optimization to a task-agnostic aesthetic manifold.
+        Removing MAR causes significant degradation across all quality and preference metrics.
+      </p>
+
+      <div class="results-card">
+        <div class="results-card-header">MAR Ablation &mdash; Aesthetic and Quality Metrics</div>
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th>Model</th>
+              <th>ImageReward &#8593;</th>
+              <th>Aesthetic &#8593;</th>
+              <th>HPS-v2.1 &#8593;</th>
+              <th>QwenVL &#8593;</th>
+              <th>UnifiedReward &#8593;</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr class="base-row">
+              <td>SD-3.5-M (base)</td>
+              <td>1.02</td><td>5.87</td><td>0.298</td><td>3.45</td><td>3.339</td>
+            </tr>
+            <tr>
+              <td>GRPO-DeQA</td>
+              <td>1.33</td><td>5.97</td><td>0.285</td><td>3.68</td><td>3.456</td>
+            </tr>
+            <tr>
+              <td>GRPO-Mix</td>
+              <td>1.23</td><td>5.93</td><td>0.310</td><td>3.88</td><td>3.501</td>
+            </tr>
+            <tr>
+              <td>Flow-OPD w/o MAR</td>
+              <td>1.26</td><td>5.89</td><td>0.300</td><td>3.82</td><td>3.518</td>
+            </tr>
+            <tr class="our-row">
+              <td><strong>Flow-OPD (w/ MAR)</strong></td>
+              <td class="best"><strong>1.36</strong></td>
+              <td class="best"><strong>6.23</strong></td>
+              <td class="best"><strong>0.330</strong></td>
+              <td class="best"><strong>4.05</strong></td>
+              <td class="best"><strong>3.659</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="metric-row">
+        <div class="metric-item">
+          <div class="mlabel">ImageReward</div>
+          <div class="mvalues"><span class="mbase">w/o MAR: 1.26</span><span class="mours">w/ MAR: 1.36 (+0.10)</span></div>
+          <div class="mbar"><div class="mbar-fill" style="width:68%;background:#059669;"></div></div>
+        </div>
+        <div class="metric-item">
+          <div class="mlabel">Aesthetic Score</div>
+          <div class="mvalues"><span class="mbase">w/o MAR: 5.89</span><span class="mours">w/ MAR: 6.23 (+0.34)</span></div>
+          <div class="mbar"><div class="mbar-fill" style="width:62.3%;background:#059669;"></div></div>
+        </div>
+        <div class="metric-item">
+          <div class="mlabel">QwenVL Score</div>
+          <div class="mvalues"><span class="mbase">DiffusionNFT: 3.74</span><span class="mours">Ours: 4.05 (+0.31)</span></div>
+          <div class="mbar"><div class="mbar-fill" style="width:67.5%;background:#059669;"></div></div>
+        </div>
+      </div>
+
+      <!-- Image placeholder: MAR visualization -->
+      <div class="img-placeholder">
+        <div class="img-placeholder-inner">
+          <div class="ip-icon">&#127912;</div>
+          <div class="ip-title">MAR Effect: Mode Collapse Analysis</div>
+          <div class="ip-sub">Place images showing w/ MAR vs. w/o MAR on aesthetic quality and mode coverage. Demonstrate how MAR prevents background collapse and semantic redundancy. Suggested size: 1200&times;380px.</div>
+        </div>
+      </div>
+
+      <div class="insight-box">
+        <h4>Why MAR Works</h4>
+        <p>
+          The KL regularization from the aesthetic teacher acts as a continuous elastic anchor, decoupling
+          functional alignment (per-task vector fields) from stylistic preservation (aesthetic manifold).
+          Without MAR, the model suffers from background mode collapse (monotonous environments) and
+          semantic redundancy (identical features across entities).
+        </p>
+      </div>
+    </div>
+
+    <!-- Additional qualitative placeholder -->
+    <div class="sub-result reveal">
+      <div class="sub-result-label">Qualitative Analysis</div>
+      <div class="img-placeholder">
+        <div class="img-placeholder-inner">
+          <div class="ip-icon">&#128247;</div>
+          <div class="ip-title">Qualitative Results: Text Rendering, Composition, and Aesthetic Quality</div>
+          <div class="ip-sub">Place a grid of generated images comparing base SD-3.5-M, GRPO-Mix, and Flow-OPD across diverse prompts (text rendering, compositional generation, aesthetic quality). Suggested size: 1200&times;600px.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ===== ANALYSIS ===== -->
+<section class="alt" id="analysis">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">04 &mdash; Analysis</div>
+      <h2 class="section-title">Why Flow-OPD Works</h2>
+      <p class="section-intro">Three mechanisms jointly resolve the reward sparsity and gradient interference bottlenecks.</p>
+    </div>
+
+    <div class="analysis-grid reveal">
+      <div class="analysis-card">
+        <h3>Cold Start Prevents Trajectory Divergence</h3>
+        <p>Without initialization, early rollout trajectories diverge from the teacher's high-quality manifold. Model Merging positions the student in a high-competence parameter region without additional gradient interference.</p>
+      </div>
+      <div class="analysis-card">
+        <h3>Dense Supervision Eliminates Reward Sparsity</h3>
+        <p>Each teacher provides a full vector field at every diffusion timestep. The L<sub>2</sub> distance between student and teacher vector fields gives dense per-step rewards, fully utilizing the high-dimensional action space.</p>
+      </div>
+      <div class="analysis-card">
+        <h3>Dynamic Routing Prevents Gradient Interference</h3>
+        <p>The routing &alpha;<sub>k</sub>(c, x<sub>t</sub>) activates only relevant task experts. Orthogonal task gradients are no longer summed into a conflicting direction &mdash; each task contributes independently.</p>
+      </div>
+      <div class="analysis-card">
+        <h3>MAR Decouples Function from Style</h3>
+        <p>The policy loss optimizes functional alignment while MAR preserves aesthetic quality. This elastic separation prevents reward hacking: the model can improve task performance without sacrificing generative diversity.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ===== RELATED ===== -->
+<section id="related">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">05 &mdash; Related Work</div>
+      <h2 class="section-title">Positioned at the Intersection</h2>
+      <p class="section-intro">Flow-OPD bridges three research threads: RL for T2I, On-Policy Distillation, and Multi-Teacher Distillation.</p>
+    </div>
+
+    <div class="related-grid reveal">
+      <div class="related-card">
+        <h4>RL for T2I Models</h4>
+        <p>Methods like DDPO, DPOK, ReFL, Diffusion-DPO, DanceGRPO, Flow-GRPO, and GDPO all suffer from reward hacking or seesaw effects in multi-reward settings.</p>
+        <div class="chip-row">
+          <span class="chip">DDPO</span><span class="chip">DPOK</span><span class="chip">ReFL</span><span class="chip">Flow-GRPO</span><span class="chip">GDPO</span>
+        </div>
+      </div>
+      <div class="related-card">
+        <h4>On-Policy Distillation (OPD)</h4>
+        <p>Flow-OPD is the first systematic migration of OPD from LLMs to visual Flow Matching models. Prior OPD methods (GKD, MiniLLM, Fast OPD, PACED) were limited to discrete-token domains.</p>
+        <div class="chip-row">
+          <span class="chip">GKD</span><span class="chip">MiniLLM</span><span class="chip">Fast OPD</span><span class="chip">PACED</span>
+        </div>
+      </div>
+      <div class="related-card">
+        <h4>Multi-Teacher Distillation</h4>
+        <p>Flow-OPD extends multi-teacher distillation to the continuous-time Flow Matching domain with dense vector field supervision and task-style decoupling.</p>
+        <div class="chip-row">
+          <span class="chip">Multi-Teacher</span><span class="chip">Vector Field</span><span class="chip">Dense Distill</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ===== LIMITATIONS ===== -->
+<section class="alt" id="limitations">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">06 &mdash; Limitations &amp; Future Work</div>
+      <h2 class="section-title">Honest Assessment</h2>
+    </div>
+
+    <div class="lim-grid reveal" style="margin-bottom: 28px;">
+      <div class="lim-card">
+        <h4>Teacher Ceiling</h4>
+        <p>When specialized teachers fail to synthesize semantically correct images, errors propagate through dense supervisory signals, limiting the student ceiling. Weak teachers cap student performance.</p>
+      </div>
+      <div class="lim-card">
+        <h4>Architectural Homogeneity</h4>
+        <p>Teacher and student must share the same architecture for fine-grained, step-wise vector field supervision. Cross-architecture distillation remains an open challenge.</p>
+      </div>
+    </div>
+
+    <div class="section-label reveal" style="margin-bottom: 14px;">Future Directions</div>
+    <div class="future-grid reveal">
+      <div class="future-card">
+        <h4>Co-evolutionary Distillation</h4>
+        <p>Iteratively refine teachers and students together, potentially breaking the teacher ceiling bottleneck through mutual improvement.</p>
+      </div>
+      <div class="future-card">
+        <h4>Self-Distillation</h4>
+        <p>Use the student itself as a multi-expert ensemble via task-conditioned routing, boosting performance without external teachers.</p>
+      </div>
+      <div class="future-card">
+        <h4>Cross-Architecture Distillation</h4>
+        <p>Bridge heterogeneous model architectures (e.g., DiT vs. U-Net) through shared continuous representations.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ===== CITATION ===== -->
+<section id="citation">
+  <div class="container">
+    <div class="reveal">
+      <div class="section-label">07 &mdash; Citation</div>
+      <h2 class="section-title">Cite This Work</h2>
+    </div>
+    <div class="citation-block reveal">@article{flowopd2026,
+  title = {Flow-OPD: On-Policy Distillation for Flow Matching Models},
+  author = {Zhen Fang and Wenxuan Huang and Yu Zeng and Yiming Zhao
+            and Shuang Chen and Kaituo Feng and Yunlong Lin and Jie Liu
+            and Lin Chen and Zehui Chen and Shaosheng Cao and Feng Zhao},
+  year = {2026}
+}</div>
+    <div class="reveal" style="margin-top: 20px;">
+      <button class="btn btn-outline" onclick="copyCitation()">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+        Copy Citation
+      </button>
+    </div>
+  </div>
+</section>
+
+<div class="section-divider"></div>
+
+<!-- ===== FOOTER ===== -->
+<footer>
+  <div class="container">
+    <div class="footer-inner">
+      <div class="footer-logo">Flow-OPD</div>
+      <div class="footer-copy">&copy; 2026 &middot; Flow-OPD</div>
+    </div>
+  </div>
+</footer>
+
+<!-- ===== SCRIPTS ===== -->
+<script>
+  // Scroll reveal
+  const reveals = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) entry.target.classList.add('visible');
+    });
+  }, { threshold: 0.08, rootMargin: '0px 0px -30px 0px' });
+  reveals.forEach(el => observer.observe(el));
+
+  // Copy citation
+  function copyCitation() {
+    const text = `@article{flowopd2026,
+  title = {Flow-OPD: On-Policy Distillation for Flow Matching Models},
+  author = {Zhen Fang and Wenxuan Huang and Yu Zeng and Yiming Zhao
+            and Shuang Chen and Kaituo Feng and Yunlong Lin and Jie Liu
+            and Lin Chen and Zehui Chen and Shaosheng Cao and Feng Zhao},
+  year = {2026}
+}`;
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = event.target.closest('.btn');
+      const orig = btn.innerHTML;
+      btn.innerHTML = `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Copied!`;
+      btn.style.color = '#059669';
+      setTimeout(() => { btn.innerHTML = orig; btn.style.color = ''; }, 2000);
+    });
+  }
+
+  // Smooth scroll
+  document.querySelectorAll('a[href^="#"]').forEach(a => {
+    a.addEventListener('click', e => {
+      const tgt = document.querySelector(a.getAttribute('href'));
+      if (tgt) { e.preventDefault(); tgt.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    });
+  });
+</script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', function() {
+    renderMathInElement(document.body, {
+      delimiters: [
+        {left: '$$', right: '$$', display: true},
+        {left: '$', right: '$', display: false},
+      ],
+      throwOnError: false
+    });
+  });
+</script>
+</body>
+</html>
