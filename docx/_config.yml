@@ -1,0 +1,12 @@
+# GitHub Pages Configuration (docs/ folder)
+title: Flow-OPD
+description: On-Policy Distillation for Generalist Flow Matching Text-to-Image Generation
+
+# Exclude unnecessary files from the build
+exclude:
+  - "index 2.html"
+  - "*.md"
+  - "architecture.md"
+
+# Markdown settings
+markdown: kramdown
