@@ -1,1 +1,22 @@
+# GitHub Pages Configuration
+title: Flow-OPD
+description: On-Policy Distillation for Generalist Flow Matching Text-to-Image Generation
+future: true
+
+# Build settings — do NOT set source here, GitHub Pages uses docs/ automatically
+# when the repo is configured for that publishing source
+markdown: kramdown
+kramdown:
+  input: GFM
+  hard_wrap: false
+
+# Exclude files from the build
+exclude:
+  - "*.md"
+  - "Gemfile"
+  - "Gemfile.lock"
+  - "node_modules"
+  - "package.json"
+  - "package-lock.json"
+  - "index 2.html"
 
