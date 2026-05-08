@@ -1,12 +1,20 @@
-# GitHub Pages Configuration (docs/ folder)
 title: Flow-OPD
-description: On-Policy Distillation for Generalist Flow Matching Text-to-Image Generation
+description: "Flow-OPD: On-Policy Distillation for Generalist Flow Matching Text-to-Image Generation — NeurIPS 2026"
+baseurl: ""
+url: "https://costaliya.github.io"
+github_url: "https://github.com/CostaliyA/Flow-OPD"
+author: "Zhen Fang, Wenxuan Huang, Yu Zeng, Yiming Zhao, Shuang Chen, Kaituo Feng, Yunlong Lin, Lin Chen, Zehui Chen, Shaosheng Cao, Feng Zhao"
+conference: "NeurIPS 2026"
 
-# Exclude unnecessary files from the build
-exclude:
-  - "index 2.html"
-  - "*.md"
-  - "architecture.md"
-
-# Markdown settings
 markdown: kramdown
+kramdown:
+  input: GFM
+  hard_wrap: false
+
+# Build settings
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - README.md
+  - "*.tex"
+  - "*.bib"
