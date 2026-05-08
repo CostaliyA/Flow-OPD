@@ -157,6 +157,26 @@
         line-height: 1.8;
       }
 
+      /* ===== Keywords ===== */
+      .keywords {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin-bottom: 16px;
+        flex-wrap: wrap;
+      }
+      .kw-badge {
+        background: var(--blue-soft);
+        color: var(--blue);
+        border: 1px solid #c7d2fe;
+        border-radius: 20px;
+        padding: 4px 16px;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 1px;
+        text-transform: uppercase;
+      }
+
       /* ===== Responsive ===== */
       @media (max-width: 680px) {
         .pipeline-diagram { flex-direction: column; }
@@ -181,6 +201,10 @@
     <main id="top">
       <!-- ===== HERO ===== -->
       <section class="hero paper-width">
+        <div class="keywords">
+          <span class="kw-badge">T2I</span>
+          <span class="kw-badge">OPD</span>
+        </div>
         <h1>Flow-OPD: On-Policy Distillation for Flow Matching Models</h1>
         <p class="subtitle">
           Replacing sparse scalar rewards with dense, trajectory-level, multi-teacher vector field supervision
