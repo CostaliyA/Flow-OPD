@@ -189,6 +189,36 @@
       .teaser-title { font-size: 15px; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
       .teaser-sub { font-size: 12px; color: var(--muted); line-height: 1.7; max-width: 400px; margin: 0 auto; }
 
+      /* ===== Formula Block ===== */
+      .formula-block {
+        margin-top: 32px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 24px;
+        background: var(--soft);
+      }
+      .formula-block h3 { margin: 0 0 20px; }
+      .formula-item {
+        margin-bottom: 28px;
+        padding-bottom: 28px;
+        border-bottom: 1px solid var(--line);
+      }
+      .formula-item:last-child { margin-bottom: 0; padding-bottom: 0; border-bottom: none; }
+      .formula-label { font-size: 13px; font-weight: 700; color: var(--purple); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+      .formula {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 14px 18px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 13px;
+        color: var(--ink);
+        overflow-x: auto;
+        margin-bottom: 10px;
+        line-height: 1.8;
+      }
+      .formula-caption { font-size: 12px; color: var(--muted); line-height: 1.6; margin: 0; }
+
       /* ===== Keywords ===== */
       .keywords {
         display: flex;
@@ -379,6 +409,51 @@
               functional alignment from stylistic preservation.
             </p>
           </article>
+        </div>
+
+        <!-- ===== KEY FORMULAS ===== -->
+        <div class="formula-block">
+          <h3>Core Formulations</h3>
+
+          <div class="formula-item">
+            <div class="formula-label">On-Policy Sampling (SDE)</div>
+            <div class="formula">
+              <code>d</code>x<sub>t</sub> = &#x23;18; v<sub>&#x03B8;</sub>(x<sub>t</sub>, t) + &#x03C3;<sub>t</sub><sup>2</sup>/2t &#x22C5; (x<sub>t</sub> + (1&#x2212;t)&#x22C5;v<sub>&#x03B8;</sub>(x<sub>t</sub>, t)) &#x23;D;t + &#x03C3;<sub>t</sub>&#x23;D;w<code>&#x23D;</code>
+            </div>
+            <p class="formula-caption">Converting the deterministic ODE into an SDE for stochastic on-policy exploration. Sampling G trajectories per prompt generates marginal distribution x<sub>t</sub> &#x223C; &#x03C1;<sub>t</sub><sup>&#x03B8;</sup>(&#x22B5; | c).</p>
+          </div>
+
+          <div class="formula-item">
+            <div class="formula-label">Multi-Teacher Target Vector Field</div>
+            <div class="formula">
+              v<sub>target</sub>(x<sub>t</sub>, t, c) = &#x2211;<sub>k=1</sub><sup>K</sup> &#x03B1;<sub>k</sub>(c, x<sub>t</sub>) &#x22C5; v<sub>&#x03D5;<sub>k</sub></sub>(x<sub>t</sub>, t, c)
+            </div>
+            <p class="formula-caption">Dynamic routing &#x03B1;<sub>k</sub>(c, x<sub>t</sub>) aggregates expert vector fields from GenEval, OCR, DeQA, and PickScore, resolving gradient interference across domains.</p>
+          </div>
+
+          <div class="formula-item">
+            <div class="formula-label">Dense KL Reward</div>
+            <div class="formula">
+              D<sub>KL</sub>(&#x03C0;<sub>&#x03B8;</sub> &#x2016; &#x03C0;<sub>target</sub>) = &#x0394;t/2 &#x22C5; (&#x03C3;<sub>t</sub>(1&#x2212;t)/2t + 1/&#x03C3;<sub>t</sub>)<sup>2</sup> &#x22C5; &#x2016;v<sub>&#x03B8;</sub> &#x2212; v<sub>target</sub>&#x2016;<sup>2</sup>
+            </div>
+            <p class="formula-caption">Reverse KL divergence in the SDE framework reduces to a time-weighted L<sub>2</sub> distance between student and teacher vector fields.</p>
+          </div>
+
+          <div class="formula-item">
+            <div class="formula-label">PPO-Clipped Policy Update</div>
+            <div class="formula">
+              J(&#x03B8;) &#x2248; 1/(B&#x22C5;G) &#x2211; min(&#x03C1;<sub>t,i,j</sub>(&#x03B8;)&#x22C5;r<sub>t,i,j</sub><sup>OPD</sup>, clip(&#x03C1;, 1&#x2212;&#x03B5;, 1+&#x03B5;)&#x22C5;r<sub>t,i,j</sub><sup>OPD</sup>)
+            </div>
+            <p class="formula-caption">Clipped surrogate objective bounds the policy trust region. Gradients flow exclusively through the policy ratio &#x03C1;, preserving fine-grained credit assignment.</p>
+          </div>
+
+          <div class="formula-item">
+            <div class="formula-label">Total Training Loss (with MAR)</div>
+            <div class="formula">
+              L<sub>Total</sub>(&#x03B8;) = L<sub>Policy</sub>(&#x03B8;) + &#x03BB; &#x220E;<sub>c,t,x<sub>t</sub>&#x223C;&#x03C1;<sub>t</sub><sup>&#x03B8;</sup></sub> [ w(t) &#x22C5; &#x2016;v<sub>&#x03B8;</sub> &#x2212; v<sub>aesthetic</sub>&#x2016;<sup>2</sup> ]
+            </div>
+            <p class="formula-caption">MAR introduces KL regularization from a frozen aesthetic teacher as a continuous elastic anchor, preventing aesthetic degradation while absorbing functional intelligence.</p>
+          </div>
         </div>
       </section>
 
