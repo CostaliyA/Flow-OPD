@@ -1,4 +1,4 @@
-name: Deploy Jekyll site to Pages
+name: Deploy to GitHub Pages
 
 on:
   push:
@@ -14,32 +14,24 @@ concurrency:
   group: "pages"
   cancel-in-progress: false
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Copy Gemfile to root
-        run: cp docs/Gemfile Gemfile && cp docs/Gemfile.lock Gemfile.lock 2>/dev/null || cp docs/Gemfile Gemfile
-      - name: Setup Ruby
-        uses: ruby/setup-ruby@v1
-        with:
-          ruby-version: '3.1'
-          bundler-cache: true
-          cache-version: 0
+
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v5
-      - name: Build with Jekyll
-        run: bundle exec jekyll build --baseurl "${{ steps.pages.outputs.base_path }}"
-        env:
-          JEKYLL_ENV: production
-        working-directory: 'docs'
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: 'docs/_site'
+          path: 'docs'
 
   deploy:
     environment:
