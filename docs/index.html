@@ -209,14 +209,6 @@
         text-transform: uppercase;
       }
 
-      /* ===== Hero Title Gradient ===== */
-      .hero h1 {
-        background: linear-gradient(135deg, var(--purple-accent) 0%, var(--purple) 40%, var(--purple-mid) 100%);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
-      }
-
       /* ===== Responsive ===== */
       @media (max-width: 680px) {
         .pipeline-diagram { flex-direction: column; }
@@ -245,7 +237,7 @@
           <span class="kw-badge">T2I</span>
           <span class="kw-badge">OPD</span>
         </div>
-        <h1>Flow-OPD: On-Policy Distillation for Flow Matching Models</h1>
+        <h1><span class="title-brand">Flow-OPD</span><span class="title-rest">: On-Policy Distillation for Flow Matching Models</span></h1>
         <p class="subtitle">
           Replacing sparse scalar rewards with dense, trajectory-level, multi-teacher vector field supervision
           for multi-task alignment of text-to-image diffusion models.
