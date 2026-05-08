@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SCOPE</title>
+    <meta
+      name="description"
+      content="SCOPE is a specification-guided skill orchestration framework for commitment-level complex image generation."
+    />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <link rel="icon" type="image/x-icon" href="favicon.ico" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="SCOPE: Structured Decomposition and Conditional Skill Orchestration for Complex Image Generation" />
+    <meta property="og:description" content="SCOPE is a specification-guided skill orchestration framework that maintains semantic commitments throughout the generation lifecycle for complex image generation." />
+    <meta property="og:image" content="assets/teaser_project_light.jpg" />
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="SCOPE | Complex Image Generation" />
+    <meta name="twitter:description" content="Specification-guided skill orchestration for commitment-level complex image generation." />
+    <meta name="twitter:image" content="assets/teaser_project_light.jpg" />
+
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="#top"><img src="favicon.png" class="brand-icon" />SCOPE</a>
+      <nav aria-label="Primary navigation">
+        <a href="#abstract">Abstract</a>
+        <a href="#method">Method</a>
+        <a href="#gen-arena">Gen-Arena</a>
+        <a href="#results">Results</a>
+        <a href="#gallery">Gallery</a>
+        <a href="#bibtex">BibTeX</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero paper-width">
+        <img src="assets/cases/icon_transparent.png" alt="SCOPE mascot" class="hero-icon" />
+        <h1>SCOPE: Structured Decomposition and Conditional Skill Orchestration for Complex Image Generation</h1>
+        <p class="subtitle">
+          A specification-guided framework that keeps semantic commitments identifiable across generation lifecycle.
+        </p>
+
+        <div class="authors" aria-label="Authors">
+          <span>Tianfei Ren<sup>1</sup></span>
+          <span>Zhipeng Yan<sup>1</sup></span>
+          <span>Yiming Zhao<sup>1</sup></span>
+          <span>Zhen Fang<sup>1*</sup></span>
+          <span>Yu Zeng<sup>1*</sup></span>
+          <span>Guohui Zhang<sup>1</sup></span>
+          <span>Hang Xu<sup>1</sup></span>
+          <span>Xiaoxiao Ma<sup>1</sup></span>
+          <span>Shiting Huang<sup>1</sup></span>
+          <span>Ke Xu<sup>1</sup></span>
+          <span>Wenxuan Huang</span>
+          <span>Lionel Z. Wang<sup>2,3</sup></span>
+          <span>Lin Chen<sup>1</sup></span>
+          <span>Zehui Chen<sup>1</sup></span>
+          <span>Jie Huang<sup>1</sup></span>
+          <span>Feng Zhao<sup>1&dagger;</sup></span>
+        </div>
+
+        <div class="affiliations">
+          <p><sup>1</sup>MoE Key Laboratory of Brain-inspired Intelligent Perception and Cognition, University of Science and Technology of China</p>
+          <p><sup>2</sup>The Hong Kong Polytechnic University &nbsp; <sup>3</sup>Nanyang Technological University</p>
+          <p><sup>*</sup>Project lead &nbsp; <sup>&dagger;</sup>Corresponding author</p>
+        </div>
+
+        <div class="actions">
+          <a class="button primary" href="#">📄 Paper pending</a>
+          <a class="button" href="https://github.com/nopnor/SCOPE">&lt;/&gt; Code</a>
+          <a class="button" href="https://huggingface.co/datasets/rentianfei122/Gen-Arena">🏆 Gen-Arena</a>
+        </div>
+      </section>
+
+      <figure class="teaser paper-width">
+        <img src="assets/teaser_project_light.jpg" alt="SCOPE teaser with diverse complex image generation examples" />
+        <figcaption>
+          Existing text-to-image pipelines can retrieve facts, verify outputs, and repair
+          images, but they often lose track of which semantic commitment each operation is resolving, a discontinuity
+          we term the <strong>Conceptual Rift</strong>. SCOPE decomposes each prompt into an evolving structured
+          specification of entities, constraints, and unknowns. It conditionally invokes retrieval, reasoning, and
+          repair skills for unresolved or violated commitments, and uses verification to route the generation
+          lifecycle. The examples above illustrate faithful generation across knowledge-intensive events,
+          reference-heavy intellectual properties, and multi-entity compositions with precise relation, layout, and
+          attribute constraints.
+        </figcaption>
+      </figure>
+
+      <section class="section paper-width" id="abstract">
+        <h2>Abstract</h2>
+        <p>
+          Text-to-image models have made strong progress in visual fidelity, but faithfully realizing complex visual
+          intents remains challenging because many requirements must be tracked across grounding, generation, and
+          verification. We refer to these requirements as semantic commitments and formalize their lifecycle
+          discontinuity as the Conceptual Rift. SCOPE addresses this problem by maintaining semantic commitments in an
+          evolving structured specification and conditionally invoking retrieval, reasoning, and repair skills around
+          unresolved or violated commitments. We further introduce Gen-Arena, a human-annotated benchmark with entity- and constraint-level specifications,
+          together with Entity-Gated Intent Pass Rate (EGIP), a strict entity-first pass criterion. SCOPE substantially
+          outperforms evaluated baselines on Gen-Arena, achieving 0.60 EGIP, and also achieves strong results on WISE-V
+          and MindBench.
+        </p>
+      </section>
+
+      <section class="section paper-width">
+        <h2>Problem and Contributions</h2>
+        <div class="contrib-grid">
+          <article>
+            <h3>Conceptual Rift</h3>
+            <p>
+              Multi-step generation can retrieve facts, verify outputs, or repair images, but these operations often
+              lose track of which semantic commitment they are resolving or fixing.
+            </p>
+          </article>
+          <article>
+            <h3>Persistent Specification</h3>
+            <p>
+              SCOPE represents each prompt as entities, constraints, and unknowns, then keeps this specification as the
+              shared interface across all stages.
+            </p>
+          </article>
+          <article>
+            <h3>Conditional Skills</h3>
+            <p>
+              Retrieval, reasoning, and repair are invoked only when the current specification exposes unresolved or
+              violated commitments.
+            </p>
+          </article>
+          <article>
+            <h3>Commitment-Level Evaluation</h3>
+            <p>
+              Gen-Arena evaluates strict intent fulfillment: an instance passes only when all required entities and all
+              gated constraints are satisfied.
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section class="section paper-width" id="method">
+        <h2>Method Overview</h2>
+        <p>
+          SCOPE iterates over decomposition, conditional skill invocation, synthesis, generation, verification, and
+          repair. The Decomposer makes entities, constraints, and unknowns explicit in a structured specification. When
+          the specification exposes missing evidence or unresolved requirements, SCOPE invokes retrieval and reasoning
+          skills to fill them before synthesis. After generation, the Verifier maps item-level failures back to the
+          specification, allowing repair skills to target the violated commitments instead of regenerating blindly.
+        </p>
+        <figure class="paper-figure">
+          <img src="assets/figures/framework.jpg" alt="Overview of the SCOPE framework" />
+          <figcaption>
+            SCOPE decomposes prompts into entities, constraints, and unknowns, invokes skills for unresolved or failed
+            commitments, and feeds the updated specification into generation and verification.
+          </figcaption>
+        </figure>
+      </section>
+
+      <section class="section paper-width" id="gen-arena">
+        <h2>Gen-Arena and EGIP</h2>
+        <p>
+          Gen-Arena contains 300 human-annotated instances across cartoon, game, sports, entertainment, competition, and
+          ceremony categories. The benchmark includes 1,954 required entities, 2,533 atomic constraints, and 310
+          reference images. Constraints are grouped into attribute, relation, and layout commitments.
+        </p>
+        <div class="stat-grid">
+          <div><strong>300</strong><span>instances</span></div>
+          <div><strong>1,954</strong><span>entities</span></div>
+          <div><strong>2,533</strong><span>constraints</span></div>
+          <div><strong>310</strong><span>reference images</span></div>
+        </div>
+        <figure class="paper-figure">
+          <img src="assets/figures/benchmark.jpg" alt="Gen-Arena construction and EGIP evaluation" />
+          <figcaption>
+            EGIP uses an entity-first gate: missing or incorrect required entities fail the instance before dependent
+            constraints are evaluated.
+          </figcaption>
+        </figure>
+      </section>
+
+      <section class="section paper-width" id="results">
+        <h2>Main Results</h2>
+        <p class="note">
+          These numbers follow the current manuscript setting. The public paper link will be attached after release.
+        </p>
+
+        <div class="results-grid">
+          <article class="result-card wide">
+            <h3>Full Gen-Arena Category Results</h3>
+            <div class="table-scroll">
+              <table class="results-table category-table">
+                <thead>
+                  <tr><th>Method</th><th>Cartoon</th><th>Game</th><th>Sports</th><th>Ent.</th><th>Comp.</th><th>Ceremony</th><th>Overall</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Nano Banana</td><td>0.02</td><td>0.00</td><td>0.16</td><td>0.14</td><td>0.10</td><td>0.00</td><td>0.07</td></tr>
+                  <tr><td>Nano Banana Pro</td><td>0.04</td><td>0.00</td><td>0.34</td><td>0.16</td><td>0.18</td><td>0.54</td><td>0.21</td></tr>
+                  <tr><td>Qwen-Image</td><td>0.00</td><td>0.00</td><td>0.10</td><td>0.02</td><td>0.00</td><td>0.00</td><td>0.02</td></tr>
+                  <tr><td>Z-Image-Turbo</td><td>0.00</td><td>0.00</td><td>0.09</td><td>0.02</td><td>0.00</td><td>0.00</td><td>0.01</td></tr>
+                  <tr><td>FLUX.1-dev</td><td>0.00</td><td>0.00</td><td>0.03</td><td>0.02</td><td>0.00</td><td>0.00</td><td>0.01</td></tr>
+                  <tr class="highlight"><td>SCOPE</td><td>0.52</td><td>0.46</td><td>0.72</td><td>0.62</td><td>0.52</td><td>0.74</td><td>0.60</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="result-card">
+            <h3>Gen-Arena EGIP</h3>
+            <div class="table-scroll">
+              <table class="results-table metric-table">
+                <thead>
+                  <tr><th>Method</th><th>Overall</th><th>Sports</th><th>Ceremony</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Nano Banana</td><td>0.07</td><td>0.16</td><td>0.00</td></tr>
+                  <tr><td>Nano Banana Pro</td><td>0.21</td><td>0.34</td><td>0.54</td></tr>
+                  <tr><td>Qwen-Image</td><td>0.02</td><td>0.10</td><td>0.00</td></tr>
+                  <tr><td>Z-Image-Turbo</td><td>0.01</td><td>0.09</td><td>0.00</td></tr>
+                  <tr class="highlight"><td>SCOPE</td><td>0.60</td><td>0.72</td><td>0.74</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="result-card">
+            <h3>Diagnostic Pass Rates</h3>
+            <div class="table-scroll">
+              <table class="results-table metric-table">
+                <thead>
+                  <tr><th>Method</th><th>EGIP</th><th>Entity</th><th>Gated Constraint</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Nano Banana Pro</td><td>0.21</td><td>0.82</td><td>0.59</td></tr>
+                  <tr><td>Qwen-Image</td><td>0.02</td><td>0.83</td><td>0.49</td></tr>
+                  <tr><td>Z-Image-Turbo</td><td>0.01</td><td>0.84</td><td>0.48</td></tr>
+                  <tr class="highlight"><td>SCOPE</td><td>0.60</td><td>0.92</td><td>0.83</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="result-card">
+            <h3>Ablation</h3>
+            <div class="table-scroll">
+              <table class="results-table metric-table">
+                <thead>
+                  <tr><th>Method</th><th>EGIP</th><th>Gated Constraint</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Direct single</td><td>0.21</td><td>0.59</td></tr>
+                  <tr><td>Direct best-of-3</td><td>0.40</td><td>0.71</td></tr>
+                  <tr><td>SCOPE w/o retrieval and reasoning</td><td>0.22</td><td>0.60</td></tr>
+                  <tr><td>SCOPE w/o repair</td><td>0.42</td><td>0.72</td></tr>
+                  <tr class="highlight"><td>SCOPE</td><td>0.60</td><td>0.83</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+
+          <article class="result-card">
+            <h3>External Benchmarks</h3>
+            <div class="table-scroll">
+              <table class="results-table external-table">
+                <thead>
+                  <tr><th>Benchmark</th><th>SCOPE</th><th>Best compared baseline</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>WISE-V Overall</td><td>0.907</td><td>0.876</td></tr>
+                  <tr><td>MindBench Knowledge</td><td>0.59</td><td>0.40</td></tr>
+                  <tr><td>MindBench Reasoning</td><td>0.63</td><td>0.44</td></tr>
+                  <tr><td>MindBench Overall</td><td>0.61</td><td>0.41</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+          <figure class="paper-figure results-figure">
+            <img src="assets/figures/compare.jpg" alt="Qualitative comparison between SCOPE and direct generation baselines" />
+            <figcaption>
+              Qualitative comparisons show that plausible images can still fail under exact entity, attribute, relation,
+              or layout commitments.
+            </figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section class="section paper-width" id="gallery">
+        <h2>Qualitative Gallery</h2>
+        <p>
+          The gallery shows selected qualitative outputs from SCOPE runs, including curated showcase examples and
+          additional Gen-Arena samples from all six categories. Each card includes the concrete prompt used for the case,
+          with filters for commitment types and Gen-Arena categories.
+        </p>
+        <div class="filters" id="filters" aria-label="Gallery filters"></div>
+        <div class="gallery-grid" id="galleryGrid"></div>
+        <p class="disclaimer">
+          Some examples use recognizable public characters, brands, or venues as research stress tests for
+          reference-grounded generation.
+        </p>
+      </section>
+
+      <section class="section paper-width" id="bibtex">
+        <h2>BibTeX</h2>
+        <pre><code>@misc{ren2026scope,
+  title  = {SCOPE: Structured Decomposition and Conditional Skill Orchestration for Complex Image Generation},
+  author = {Ren, Tianfei and Yan, Zhipeng and Zhao, Yiming and Fang, Zhen and Zeng, Yu and others},
+  year   = {2026},
+  note   = {Manuscript under review}
+}</code></pre>
+      </section>
+    </main>
+
+    <footer class="footer paper-width">
+      <p>SCOPE: Structured Decomposition and Conditional Skill Orchestration for Complex Image Generation.</p>
+    </footer>
+
+    <script src="script.js"></script>
+  </body>
+</html>
