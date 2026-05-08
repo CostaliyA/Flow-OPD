@@ -417,17 +417,17 @@
           <div class="formula-item">
             <div class="formula-label">On-Policy Sampling (SDE)</div>
             <div class="formula">
-              <code>d</code>x<sub>t</sub> = &#x23;18; v<sub>&#x03B8;</sub>(x<sub>t</sub>, t) + &#x03C3;<sub>t</sub><sup>2</sup>/2t &#x22C5; (x<sub>t</sub> + (1&#x2212;t)&#x22C5;v<sub>&#x03B8;</sub>(x<sub>t</sub>, t)) &#x23;D;t + &#x03C3;<sub>t</sub>&#x23;D;w<code>&#x23D;</code>
+              dx<sub>t</sub> = [ v<sub>&#x03B8;</sub>(x<sub>t</sub>, t) + (&#x03C3;<sub>t</sub><sup>2</sup>/2t) &#x22C5; (x<sub>t</sub> + (1&#x2212;t)v<sub>&#x03B8;</sub>(x<sub>t</sub>, t)) ] dt + &#x03C3;<sub>t</sub> dw
             </div>
             <p class="formula-caption">Converting the deterministic ODE into an SDE for stochastic on-policy exploration. Sampling G trajectories per prompt generates marginal distribution x<sub>t</sub> &#x223C; &#x03C1;<sub>t</sub><sup>&#x03B8;</sup>(&#x22B5; | c).</p>
           </div>
 
           <div class="formula-item">
-            <div class="formula-label">Multi-Teacher Target Vector Field</div>
+            <div class="formula-label">Task-Specific Teacher Routing</div>
             <div class="formula">
-              v<sub>target</sub>(x<sub>t</sub>, t, c) = &#x2211;<sub>k=1</sub><sup>K</sup> &#x03B1;<sub>k</sub>(c, x<sub>t</sub>) &#x22C5; v<sub>&#x03D5;<sub>k</sub></sub>(x<sub>t</sub>, t, c)
+              v<sub>target</sub>(x<sub>t</sub>, t, c) = v<sub>&#x03D5;<sub>k</sub></sub>(x<sub>t</sub>, t, c) &#x2203; c &#x2208; &#x1D34;<sub>k</sub>
             </div>
-            <p class="formula-caption">Dynamic routing &#x03B1;<sub>k</sub>(c, x<sub>t</sub>) aggregates expert vector fields from GenEval, OCR, DeQA, and PickScore, resolving gradient interference across domains.</p>
+            <p class="formula-caption">Each task &#x1D34;<sub>k</sub> has a dedicated domain expert teacher &#x03D5;<sub>k</sub>. Data belonging to task k is routed exclusively to its corresponding teacher, providing dense supervision without gradient interference across domains.</p>
           </div>
 
           <div class="formula-item">
