@@ -1,0 +1,77 @@
+\section{Introudction}
+Flow Matching (FM)~\cite{batifol2025flux,esser2024scaling,lipman2022flow,fang2025dualvla} has emerged as a superior paradigm for generative modeling, outperforming traditional diffusion models in both sampling efficiency and high-fidelity synthesis by learning continuous-time velocity fields.
+%
+However, as the research frontier shifts from unconstrained image synthesis toward highly-controllable, multi-dimensional alignment, the limitations of current post-training methodologies have become painfully evident. Modern applications demand that a single model masters a diverse spectrum of tasks—ranging from precise text rendering and complex compositional reasoning~\cite{huang2026visionr1incentivizingreasoningcapability, huang2026vision, chen2025advancing, chen2025ares, guo2025deepseek, chen2026opensearchvlopenrecipefrontier} to rigorous adherence to nuanced human aesthetic preferences—all within a unified generative space~\cite{han2026unicorn, chen2026unify,feng2026gen, huang2025interleaving}.
+
+Recent advances have attempted to bridge this gap by porting Reinforcement Learning (RL) algorithms, such as Group Relative Policy Optimization (GRPO)~\cite{r1}, to the flow-matching domain~\cite{liu2025flow,xue2025dancegrpo,li2025mixgrpo}\footnote{In this paper, GRPO is used by default as Flow-GRPO in flow matching.}. These methods have demonstrated significant potential in single-reward scenarios, where on-policy exploration allows the model to refine its sampling trajectories and improve specific metrics like PickScore or aesthetic scores.
+%
+Nevertheless, different tasks demand heterogeneous and conflicting feature representations. As noted in LLM alignment~\cite{zeng2026glm}, sparse scalar rewards lack the granularity to harmonize these objectives, inducing a zero-sum "seesaw effect" where optimizing specific features (e.g., OCR) inevitably degrades aesthetics via reward hacking. This necessitates a shift to dense, trajectory-level distillation to provide uncoupled expert supervision.
+%
+
+This issue has recently found a compelling solution in the field of Large Language Models (LLMs):  On-Policy Distillation (OPD).  Benefiting from OPD, models such as DeepSeek-V4~\cite{guo2025deepseek}, Mimo v2~\cite{xiao2026mimo}, and GLM-5~\cite{zeng2026glm} successfully harmonize complex, multi-domain capabilities by distilling from specialized experts. This paradigm shift raises a pivotal question for the vision community: \textbf{\textit{Can Flow Matching models similarly leverage OPD to integrate the diverse strengths of multiple teacher models into a single, robust student model?}}
+%
+To address this pivotal question, we introduce Flow-OPD, the first framework to integrate OPD into the post-training pipeline of FM models. We propose a two-stage alignment strategy that begins by cultivating specialized domain teachers through single-reward GRPO fine-tuning, ensuring each expert reaches its performance ceiling in isolation. To facilitate a smooth transition for the student model, we develop a Flow-based Cold-Start strategy featuring two distinct variants—SFT-based initialization and Model Merging—designed to establish a robust foundational policy capable of multi-task learning. Building upon this foundation, we apply OPD to the flow-matching process via a three-step orchestration: (1) performing \textbf{on-policy sampling} to capture the student model’s current velocity field, (2) executing task routing labeling where diverse experts provide dense supervision for respective domains, and (3) introducing Manifold Anchor Regularization (MAR), which incorporates a task-agnostic teacher to provide full-data supervision, effectively anchoring the generation process to a high-quality manifold and further elevating the aesthetic integrity of the synthesized images. 
+Experimental results across multiple benchmarks and metrics demonstrate that Flow-OPD achieves 10\% improvement over vanilla GRPO with sparse rewards, establishing a new frontier for scaling alignment in flow-based generative models.
+In summary, our contributions are three-fold:
+
+%%% mix 图
+\begin{figure*}[!t]
+    \centering
+    \includegraphics[scale=0.44]{images/mix.pdf}
+    % \vspace{-15pt}
+    \caption{\textbf{Performance Comparison in Multi-task Training}. During training, Flow-OPD exhibits a steady increase in mean rewards across GenEval~\cite{geneval} and OCR~\cite{textdiffuser} benchmarks, reaching a peak of 93. In contrast, vanilla GRPO converges prematurely around 78. Our approach significantly outperforms GRPO in both image synthesis and text rendering while maintaining superior generation quality and human preference alignment. The curves are smoothed for visual clarity. DeQA and PickScore are norm to 0-1. We employ model merging for cold-start in the left subgraph.
+    }
+    \label{fig:mix}
+    % \vspace{-0.7cm}
+\end{figure*}
+
+
+\begin{itemize}
+    \vspace{-0.2cm}
+    \item \textbf{Analysis of Multi-task FM Training:} We provide a empirical  analysis of the failure modes of GRPO-based multi-task training in Flow Matching models, specifically identifying the challenges of reward sparsity and gradient interference. To resolve these, we are the first, to our best knowledge, to introduce OPD paradigm into the post-training of FM models.
+    \item \textbf{The Flow-OPD Framework:} We propose \text{Flow-OPD}, a two-stage post-training framework that decouples expertise acquisition from model unification. Our framework introduces a Flow-based Cold-Start strategy (SFT and Merging variants), a task routing dense labeling mechanism for fine-grained supervision, and a novel Manifold Anchor Regularization (MAR) to ensure global generative quality through task-agnostic guidance.
+    \item \textbf{Superior Performance and Generalization:} Through extensive experiments on four mainstream benchmarks, we demonstrate that Flow-OPD achieves a substantial 10-point improvement over the GRPO baseline. Notably, the unified student model matches or even surpasses the performance of specialized teachers in-domain, while exhibiting exceptional out-of-distribution (OOD) generalization capabilities.
+\end{itemize}
+% The rapid advancement of AI-Generated Content (AIGC)~\cite{openai2025images2,deng2025emerging,esser2024scaling} has fundamentally redefined the field of visual synthesis. Current research increasingly moves beyond the constraints of conventional statistical metrics, such as FID~\cite{heusel2017gans} and CLIP Score~\cite{radford2021learning}, and the limitations of narrow domain-specific generation. Consequently, there is an emergent need for versatile Text-to-Image (T2I) models that master diverse tasks, ranging from complex compositional reasoning to precise text rendering, while ensuring rigorous alignment with human perceptual preferences.
+% %
+
+% The recent success of Reinforcement Learning (RL) in the domain of Large Language Models (LLMs)~\cite{r1,huang2026vision,zeng2026vision,huang2026internalizing} has inspired a natural extension to image synthesis. By incentivizing model rollouts guided by specialized reward models, RL-based Text-to-Image (T2I) frameworks have achieved promising results~\cite{liu2025flow,li2025mixgrpo,xue2025dancegrpo,zhang2025group}. However, these methods face a fundamental challenge: optimization against a single reward model often leads to reward hacking, where the model exploits numerical shortcuts at the expense of genuine visual quality. This phenomenon typically manifests as a significant performance degradation on out-of-distribution (OOD) data.
+% %
+% A straightforward strategy to mitigate this is multi-reward joint training, which seeks to regularize the model by exposing it to diverse domains and cross-constraints. Yet, this approach introduces intrinsic complications. Inherent conflicts between disparate reward signals often hinder convergence and lead to a performance trade-off—a 'seesaw effect' where enhancing one generative capability inadvertently diminishes another. 
+% We attribute these issues to the sparsity of reward signals. Whether derived from Vision-Language Models (VLMs) or CV-based tools such as OCR, global rewards are often too sparse to guide the complex, high-dimensional process of visual generation. Consequently, the model tends to prioritize superficial reward maximization over learning the underlying generative trajectory, a problem that is further exacerbated when conflicting multi-source signals make a unified optimization direction difficult to identify.
+% %
+% To address these limitations, a fundamental question emerges: can we construct denser supervisory signals to facilitate the training of a generalist T2I model? >
+% Rather than struggling with the inherent conflicts of multi-reward joint training, we explore a strategy of decoupling expertise acquisition from model unification. If Reinforcement Learning can successfully optimize a specialist for a single task, it is logical to first cultivate distinct `expert' teachers for disparate domains. These experts can then provide high-fidelity, fine-grained supervision—transcending the constraints of sparse global rewards—to guide a student model in internalizing complex generative capabilities.
+% %
+% Inspired by the principles of On-Policy Distillation (OPD)~\cite{lu2025onpolicydistillation,li2026rethinking}, we introduce Flow-OPD. By integrating expert-guided supervision into a meticulously designed two-stage training pipeline, we effectively compress multi-domain proficiency into a unified generator. Our approach demonstrates remarkable empirical success: Flow-OPD achieves a substantial 30-point improvement across four mainstream benchmarks. This significant gain underscores the efficacy of replacing sparse, multi-source rewards with dense, expert-driven signals to overcome the systemic bottlenecks in current RL-based visual synthesis.
+%最近RL在llm领域的成功启发了一个自然的思路：将RL引用于图像生成。通过鼓励模型进行rollout，配合针对性设计的reward model，rl在T2I取得了非常不错的成果。
+%然而这种RL-based的t2i方法存在根本性的问题：单一的reward设计非常容易导致模型产生reward hacking，这导致模型在ood的数据上表现明显下降（或者提升不显著）。一种朴素的解决这种问题的思路是通过混合训练和multi reward使模型在训练阶段就见过不同domain的数据，并通过不同reward的制约缓决单一奖励模型可能导致的reward hack（模型可同时hack多个模型的可能性相对较低）。然而这样的方法依然存在一些本质性问题：1.不同reward存在固有的任务conflict，模型不仅难以收敛，并且很可能存在跷跷板，即某种生成能力上升，另一种生成能力有下降。
+%
+%我们认为出现这样现象的原因在于reward model提供的奖励信号过于稀疏，不论是vlm提供的reward signal，还是ocr这种cv based的奖励信号，对于一个复杂的生成过程，这样的奖励信号过于稀疏，模型通过这样的reward难以学习到复杂的生产过程，而是直接去hack以获得更高的reward。而当reward model变成多源信号，稀疏奖励的缺陷被进一步放大，这样多源的优化信号使得模型难以找到兼顾所有reward的优化方向。
+%
+%为了解决这个问题，一个自然的想法是构建更细粒度的监督信号实现通才t2i模型。那么更细粒度的监督信号从何而来？
+%既然RL可以在单一任务上实现，那么是否能先为不同的任务训练单独的专才教师模型，再利用这些专才教师模型提供的细粒度监督信号将不同任务的良好能力压缩进一个学生模型呢？
+%收到最近工作opd的启发，我们提出了flow-opd。通过精心设计的两阶段训练流程，我们在四个benchmark上都得到了30分的提升。
+
+%%% intro 图
+
+
+%%% Reward 图
+% \begin{wrapfigure}{r}{0.48\textwidth}  % r表示放右侧，宽度自行调
+%     \centering
+%     \includegraphics[width=0.47\textwidth]{images/reward.pdf}
+%     \caption{XXX.}
+%     \label{fig:reward}
+% \end{wrapfigure}
+
+
+%%% pipeline
+% \begin{figure*}[!t]
+%     \centering
+%     \includegraphics[scale=0.375]{images/pipeline.pdf}
+%     % \vspace{-15pt}
+%     \caption{XXX.
+%     }
+%     \label{fig:pipeline}
+%     % \vspace{-0.7cm}
+% \end{figure*}

@@ -27,10 +27,11 @@
     <style>
       /* ===== Override vars for Flow-OPD palette ===== */
       :root {
-        --blue: #5c6bc0;
-        --blue-soft: #eef0ff;
-        --blue-accent: #3949ab;
-        --shadow: 0 16px 40px rgba(92, 107, 192, 0.10);
+        --purple: #7C3AED;
+        --purple-soft: #F3EFFF;
+        --purple-accent: #5B21B6;
+        --purple-mid: #A78BFA;
+        --shadow: 0 16px 40px rgba(124, 58, 237, 0.10);
       }
 
       /* ===== Pipeline Diagram ===== */
@@ -61,7 +62,7 @@
         font-weight: 600;
       }
       .pipeline-node.p-base { border-color: #d1d5db; color: #6b7280; }
-      .pipeline-node.p-s1 { border-color: #c7d2fe; color: var(--blue); background: var(--blue-soft); }
+      .pipeline-node.p-s1 { border-color: #ddd6fe; color: var(--purple); background: var(--purple-soft); }
       .pipeline-node.p-s2 { border-color: #a5f3fc; color: #0891b2; background: #ecfeff; }
       .pipeline-node.p-out { border-color: #fde68a; color: #b45309; background: #fffbeb; }
       .pipeline-node.p-teacher {
@@ -123,8 +124,8 @@
       .key-stat {
         flex: 1;
         min-width: 140px;
-        background: var(--blue-soft);
-        border: 1px solid #c7d2fe;
+        background: var(--purple-soft);
+        border: 1px solid #ddd6fe;
         border-radius: 12px;
         padding: 18px 20px;
         text-align: center;
@@ -132,7 +133,7 @@
       .key-stat .ks-val {
         font-size: 28px;
         font-weight: 800;
-        color: var(--blue);
+        color: var(--purple);
         line-height: 1;
       }
       .key-stat .ks-label {
@@ -197,15 +198,23 @@
         flex-wrap: wrap;
       }
       .kw-badge {
-        background: var(--blue-soft);
-        color: var(--blue);
-        border: 1px solid #c7d2fe;
+        background: var(--purple-soft);
+        color: var(--purple);
+        border: 1px solid #ddd6fe;
         border-radius: 20px;
         padding: 4px 16px;
         font-size: 12px;
         font-weight: 700;
         letter-spacing: 1px;
         text-transform: uppercase;
+      }
+
+      /* ===== Hero Title Gradient ===== */
+      .hero h1 {
+        background: linear-gradient(135deg, var(--purple-accent) 0%, var(--purple) 40%, var(--purple-mid) 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
       }
 
       /* ===== Responsive ===== */

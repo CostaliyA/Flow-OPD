@@ -1,0 +1,158 @@
+\section{Motivation}
+
+\subsection{Question 1: Why GRPO Works?}
+Standard FM relies on offline reconstruction, fundamentally limiting performance to static dataset quality and failing to optimize non-differentiable preferences. GRPO~\cite{guo2025deepseek,liu2025flow,xue2025dancegrpo} overcomes this via \textbf{online exploration}. By actively sampling $G$ outputs from its current policy $\pi_\theta$, it evaluates self-generated states using a Group Relative Advantage, $A(\mathbf{x}_1^{(i)}) = (r(\mathbf{x}_1^{(i)}) - \mu)/\sigma$. The policy gradient is then explicitly driven by these online experiences:
+\begin{equation}
+    \nabla_\theta J(\theta) \approx \frac{1}{G} \sum_{i=1}^G A(\mathbf{x}_1^{(i)}) \nabla_\theta \log p_\theta(\mathbf{x}_1^{(i)} | c)
+\end{equation}
+This continuous exploration of its own dynamic distribution enables the model to discover novel, high-reward trajectories, successfully breaking the performance ceiling of offline Supervised Fine-Tuning(SFT).
+
+
+
+\subsection{Question 2: Why GRPO Failed? A Multi-Task Perspective}
+\begin{figure*}[t]
+    \centering
+    \includegraphics[scale=0.34]{images/intro.pdf}
+    % \vspace{-15pt}
+    \caption{
+Cross-task evaluation of single-reward GRPO. Optimizing with a solitary reward signal severely compromises generalization, leading to capability degradation on non-target metrics. All baseline setups strictly adhere to the official Flow-GRPO implementation.} 
+    \label{fig:intro}
+    % \vspace{-0.6cm}
+\end{figure*}
+Despite its target-specific efficacy, single-reward GRPO incurs severe \textbf{degradation in orthogonal capabilities} (Fig.~\ref{fig:intro}). This catastrophic forgetting stems from \textbf{unconstrained gradient interference} driven by sparse scalar rewards within a shared parameter space $\theta$.
+
+For a parameter update $\Delta \theta$ driven by a target task $\mathcal{T}_1$ with advantage $A_1$, the collateral impact on an unmonitored capability $\mathcal{T}_k$ ($k \neq 1$) can be approximated via first-order Taylor expansion:
+\begin{equation}
+\Delta \mathcal{J}_k \approx \langle \nabla_\theta \mathcal{J}_k, \Delta \theta \rangle \propto \mathbb{E}_{\mathbf{x} \sim \pi_\theta} \left[ A_1(\mathbf{x}) \left\langle \nabla_\theta \mathcal{J}_k, \nabla_\theta \log \pi_\theta(\mathbf{x} | c) \right\rangle \right]
+\end{equation}
+
+In high-dimensional spaces, divergent task gradients frequently conflict ($\langle \nabla_\theta \mathcal{J}_k, \nabla_\theta \mathcal{J}_1 \rangle < 0$). Lacking supervisory signals for $\mathcal{T}_k$, the optimizer aggressively exploits these unmonitored degrees of freedom to maximize $A_1$, dismantling pre-trained synergies and leading to manifold collapse. This prompts a natural question: \textit{Can we resolve this degradation by simply mixing multiple datasets and rewards for joint optimization?}
+
+\subsection{Question 3: Can mix training solve the problem?}
+
+\noindent % 防止首行缩进影响分栏对齐
+\begin{minipage}[t]{0.48\textwidth} % 左侧文字栏，占 55% 宽度
+    To explore the feasibility of mix training approach, we conduct a controlled empirical experiment on Stable Diffusion 3.5 Medium (SD-3.5-M)~\cite{esser2024scaling}. Following Flow-GRPO, we progressively stack four distinct reward functions: GenEval, OCR, PickScore, and DeQA.    As demonstrated in Table~\ref{tab:toy_intro}, mixing scalar rewards fails to construct a stable cognitive foundation.
+%
+
+\end{minipage}
+\hfill % 撑开中间的间距
+\begin{minipage}[t]{0.48\textwidth} % 右侧表格栏，占 42% 宽度
+    \vspace{-12pt} % 确保对齐到顶部
+    \centering
+    \makeatletter\def\@captype{table}\makeatother % 在minipage中使用caption
+    \caption{Capability degradation in multi-reward optimization.}
+    \renewcommand{\arraystretch}{0.9} % 缩小行高比例
+    \label{tab:toy_intro}
+    \small
+    \begin{tabular}{lll}
+        \toprule
+        \textbf{Model} & \textbf{GenEval} & \textbf{OCR} \\
+        \midrule
+        SD-3.5-M    & 0.63 & 0.59 \\
+        +GenEval    & 0.94 & 0.65 \\
+        +OCR        & 0.89 \drop{5} & 0.91 \\
+        +PickScore  & 0.82 \drop{7} & 0.86 \drop{5} \\
+        +DeQA       & 0.73 \drop{9} & 0.83 \drop{3} \\
+        \bottomrule
+    \end{tabular}
+\end{minipage}
+
+
+While the initial reward (+GenEval) succeeds, subsequent additions trigger catastrophic forgetting (e.g., +OCR degrades GenEval by 5\%). This corroborates our hypothesis of \textbf{Gradient Interference} ($\langle \nabla_\theta \mathcal{J}_i, \nabla_\theta \mathcal{J}_j \rangle < 0$). Compressing multi-dimensional conflicts into a scalar advantage forces a zero-sum game; for instance, accommodating aesthetic stylization (PickScore) aggressively overwrites precise geometric representations.
+%
+Consequently, scalar reward mixing is fundamentally unscalable due to this sparse \textbf{Information Bottleneck}. To avoid parameter cannibalization, we require a supervisory signal that is simultaneously \textbf{on-policy} (maintaining exploration) and \textbf{densely uncoupled} (preventing interference). Inspired by Multi-Teacher On-Policy Distillation (OPD) in LLMs, we propose \textbf{Flow-OPD}. This framework seamlessly introduces the multi-teacher paradigm into continuous Foundation Models, achieving active on-policy exploration guided by dense supervision.
+
+% This insurmountable bottleneck necessitates the transition to \textbf{Multi-Teacher On-Policy Distillation (Flow-OPD)}, where scalar rewards are replaced by full-dimensional probability flow fields, anchoring the model across the entire generative manifold.
+\section{Method: Flow-OPD}
+Flow-OPD reformulates multi-task alignment via dense supervision on self-generated trajectories. We first train domain-expert teachers using Flow-GRPO. Following cold-start initialization, the student undergoes Multi-Teacher Online Distillation, dynamically routing online samples to specific teachers for fine-grained guidance. Finally, Manifold Anchor Regularization decouples functional alignment from aesthetic collapse, preserving the inherent generative prior.
+
+\subsection{Cold Start}
+To ensure a stable initialization $\theta_0$ and prevent trajectory divergence during early rollout, we explore two cold-start strategies: SFT-based and model-merging initialization. Our SFT protocol follows Flow-GRPO but utilizes trajectories sampled from specialized teachers, ensuring the student inherits expert-level knowledge distributions from the outset. Alternatively, model merging superposes the anisotropic priors of divergent teachers into a unified parameter state. This "merging-as-initialization" approach positions the student in a high-competence region of the loss landscape, where multi-task synergies are already nascent, providing a robust foundation for subsequent distillation.
+
+
+\subsubsection{Multi-Teacher On Policy Distillation}
+
+% \paragraph{Bridging OPD and Flow Matching}
+% In the realm of LLMs, OPD optimizes a student policy $\pi_\theta$ by minimizing the Reverse Kullback-Leibler (KL) divergence against a teacher distribution $\pi_{\phi}$ over trajectories $\tau$ autonomously generated by the student:
+% \begin{equation}
+% \mathcal{L}_{\text{OPD}}^{\text{LLM}}(\theta) = \mathbb{E}_{\tau \sim \pi_\theta} \left[ \sum_i D_{\text{KL}} \left( \pi_\theta(y_i | y_{<i}) \| \pi_{\phi}(y_i | y_{<i}) \right) \right]
+% \end{equation}
+% where $y_i$ represents the discrete token at step $i$. To transpose this paradigm into the continuous-time Flow Matching framework, we establish a rigorous mathematical mapping. The discrete token prefix $y_{<i}$ is analogous to the continuous latent state $x_t \in \mathbb{R}^d$ at time $t \in [0, 1]$. The autoregressive next-token prediction $\pi(\cdot|y_{<i})$ translates to the instantaneous transition density parameterized by the velocity field $v(x_t, t)$. Under a local Gaussian transition assumption (e.g., via Euler-Maruyama discretization), the token-level KL divergence elegantly reduces to the $L_2$ distance between the student and teacher vector fields. This mapping enables us to execute dense, continuous-time distillation along the entire generative trajectory.
+
+% \paragraph{On Policy Sampling}
+% Building upon the established mapping, the fundamental premise of Flow-OPD requires the student to expose its own specific distribution shifts. The student explores the generative manifold by dynamically unrolling trajectories based on its current policy $\pi_\theta$. Given a condition prompt $c \sim \mathcal{D}$, to facilitate sufficient state-space exploration—a necessity for escaping local optima in RL—we inject stochasticity by converting the deterministic probability flow ODE into an equivalent Stochastic Differential Equation (SDE):
+% \begin{equation}
+% \text{d}x_t = \left[ v_{\theta}(x_t, t) + \frac{\sigma_t^2}{2t}(x_t + (1-t)v_{\theta}(x_t, t)) \right] \text{d}t + \sigma_t \text{d}w
+% \end{equation}
+% where $w$ is the standard Wiener process. This sampling generates an on-policy marginal distribution $x_t \sim \rho_t^\theta(\cdot | c)$, explicitly revealing the intermediate states where the student is prone to hallucination or geometric errors.
+
+% \paragraph{Task-Specific Teacher Labeling}
+% Once the student reaches an on-policy state $x_t$, it queries the ensemble of expert teachers for dense supervision. Unlike standard RL which returns a sparse scalar reward, each teacher $k$ acts as a Generative Reward Model (GRM), providing a high-dimensional vector field $v_{\phi_k}(x_t, t)$. To resolve capability conflicts and avoid gradient interference across domains, we implement a dynamic routing mechanism $\alpha_k(c, x_t)$ that activates experts based on the textual condition $c$. The aggregated dense target flow is formulated as a Mode Blending of teachers:
+% \begin{equation}
+% v_{\text{target}}(x_t, t, c) = \sum_{k=1}^K \alpha_k(c, x_t) v_{\phi_k}(x_t, t, c)
+% \end{equation}
+% where $\sum_k \alpha_k = 1$. This $v_{\text{target}}$ serves as an explicit, pixel-level target, transforming the intractable credit assignment problem of scalar rewards into a deterministic regression target at every time step $t$.
+
+% \paragraph{Dense Distillation and Parameter Update}
+% Armed with the mapped target fields, we formulate the final Flow-OPD objective. We optimize the student policy by minimizing the Reverse KL divergence (now expressed as vector field discrepancy) between the student's unrolled distribution and the multi-teacher target distribution. This is defined as a weighted mean squared error over the student's self-generated states:
+% \begin{equation}
+% \mathcal{L}_{\text{OPD}}(\theta) = \mathbb{E}_{c, t, x_t \sim \rho_t^\theta} \left[ w(t) \| v_\theta(x_t, t, c) - v_{\text{target}}(x_t, t, c) \|^2 \right]
+% \end{equation}
+% where $w(t) = \frac{\Delta t}{2} \left( \frac{\sigma_t(1-t)}{2t} + \frac{1}{\sigma_t} \right)^2$ acts as the time-adaptive weight derived from the SDE transition. Crucially, the gradient backpropagation is detached from the sampling distribution $\rho_t^\theta$ (Stop-Gradient). By forcing the student to directly map its internal state $x_t$ to the optimal expert vector field $v_{\text{target}}$, Flow-OPD provides dense, full-dimensional manifold constraints, entirely circumventing the manifold collapse induced by scalar reward sparsity.
+% \subsubsection{Multi-Teacher On Policy Distillation}
+
+\paragraph{Bridging OPD and Flow Matching}
+As shown in Equ.~\ref{opd}, ThinkingMachines' OPD~\cite{lu2025onpolicydistillation} optimizes a student policy $\pi_\theta$ by utilizing the Reverse KL divergence against a teacher distribution $\pi_{\phi}$ as an environment reward over autonomously generated trajectories $\tau$.
+To transpose this Policy Gradient (PG) paradigm into the continuous-time FM framework, we map the discrete token sequence to the continuous latent trajectory $x_t \in \mathbb{R}^d$. The ar prediction translates to the instantaneous transition policy parameterized by the velocity field $v_\theta(x_t, t)$. Crucially, instead of directly minimizing the distance between vector fields via supervised regression, we derive the exact continuous-time KL divergence and utilize it as a \textit{dense reward signal} to guide policy exploration via PG.
+
+\paragraph{On Policy Sampling}
+The fundamental premise of Flow-OPD requires the student to expose its own specific distribution shifts. To facilitate sufficient state-space exploration—a necessity for escaping local optima in RL—we inject stochasticity by converting the deterministic probability flow ODE into an equivalent Stochastic Differential Equation (SDE)~\cite{liu2025flow}:
+\begin{equation}
+\text{d}x_t = \left[ v_{\theta}(x_t, t) + \frac{\sigma_t^2}{2t}(x_t + (1-t)v_{\theta}(x_t, t)) \right] \text{d}t + \sigma_t \text{d}w
+\end{equation}
+Applying Euler-Maruyama discretization over a time step $\Delta t$, the student's transition behavior acts as a local isotropic Gaussian policy:
+\begin{equation}
+\pi_\theta(x_{t-\Delta t} | x_t, c) = \mathcal{N}(\mu_\theta(x_t, t), \sigma_t^2 \Delta t I)
+\end{equation}
+By sampling $G$ independent trajectories per prompt, this generates an on-policy marginal distribution $x_t \sim \rho_t^\theta(\cdot | c)$, acting as the stochastic behavioral policy.
+
+\paragraph{Task-Specific Teacher Labeling}
+At any explored state $x_t$, the student queries the ensemble of expert teachers for evaluation. Each teacher $k$ acts as a Generative Reward Model (GRM), providing a high-dimensional vector field $v_{\phi_k}(x_t, t)$. To resolve capability conflicts across domains, we implement a dynamic routing mechanism $\alpha_k(c, x_t)$ that activates experts based on the textual condition $c$. The aggregated target flow is formulated as a Mode Blending of teachers:
+\begin{equation}
+v_{\text{target}}(x_t, t, c) = \sum_{k=1}^K \alpha_k(c, x_t) v_{\phi_k}(x_t, t, c)
+\end{equation}
+This yields the ideal target transition policy $\pi_{\text{target}} = \mathcal{N}(\mu_{\text{target}}(x_t, t), \sigma_t^2 \Delta t I)$ to evaluate the student's sampled trajectory.
+
+\paragraph{Deriving the Dense KL Reward}
+A critical challenge is formulating the Reverse KL divergence as a tractable reward signal. Because both the student and target transition policies share the exact same isotropic covariance $\sigma_t^2 \Delta t I$ induced by the SDE, their KL divergence can be analytically derived as the $L_2$ distance between their means~\cite{liu2025flow}:
+\begin{equation}
+D_{\text{KL}}(\pi_\theta \| \pi_{\text{target}}) = \frac{\| \mu_\theta(x_t, t) - \mu_{\text{target}}(x_t, t) \|^2}{2\sigma_t^2 \Delta t}
+\end{equation}
+Substituting the parameterized means from the discretized SDE, the state-dependent constants elegantly cancel out, reducing the divergence strictly to the discrepancy between the vector fields:
+\begin{equation}
+D_{\text{KL}}(\pi_\theta \| \pi_{\text{target}}) = \frac{\Delta t}{2} \left( \frac{\sigma_t(1-t)}{2t} + \frac{1}{\sigma_t} \right)^2 \| v_\theta(x_t, t, c) - v_{\text{target}}(x_t, t, c) \|^2
+\end{equation}
+Adhering to the core philosophy of ThinkingMachines OPD, the gradient backpropagation must be \textbf{strictly detached} from this divergence calculation. Therefore, we define the immediate dense reward $r_t^{(i)}$ for the $i$-th trajectory using the detached student vector field $\bar{v}_\theta$:
+\begin{equation}
+r_t^{(i)} = - w(t) \| \bar{v}_\theta(x_t^{(i)}, t, c) - v_{\text{target}}(x_t^{(i)}, t, c) \|^2
+\end{equation}
+where $w(t)$ represents the time-adaptive scaling factor derived above.
+
+\paragraph{Clipped Policy Gradient Update}
+To stabilize training against the high-frequency dense rewards, we incorporate a Proximal Policy Optimization (PPO) clipping mechanism. For a batch of $B$ prompts, each generating $G$ trajectories, let $(s_{t,i,j}, a_{t,i,j})$ denote the state-action pair at step $t$. We define the policy ratio as $\rho_{t,i,j}(\theta) = \frac{\pi_\theta(a_{t,i,j} | s_{t,i,j})}{\pi_{\theta_{old}}(a_{t,i,j} | s_{t,i,j})}$.
+
+Using the detached dense reward $r_{t,i,j}^{\text{OPD}} = r_t^{\text{OPD}}(s_{t,i,j}, a_{t,i,j})$ directly in place of an estimated advantage, we construct a clipped surrogate objective averaged over the batch size $B$, group size $G$, and all $T$ denoising steps:
+\begin{equation}
+\mathcal{J}(\theta) \approx \frac{1}{B \times G} \sum_{j=1}^B \sum_{i=1}^G \sum_{t=0}^T \min \left( \rho_{t,i,j}(\theta) r_{t,i,j}^{\text{OPD}}, \; \text{clip}\big(\rho_{t,i,j}(\theta), 1-\epsilon, 1+\epsilon\big) r_{t,i,j}^{\text{OPD}} \right)
+\end{equation}
+
+The model parameters are updated via gradient ascent: $\theta \leftarrow \theta + \alpha \nabla_\theta \mathcal{J}(\theta)$, where $\alpha$ is the learning rate. Because $r^{\text{OPD}}$ is strictly detached, gradients flow exclusively through the policy ratio $\rho_{t,i,j}(\theta)$. This formulation preserves fine-grained credit assignment while strictly bounding the policy trust region.
+\paragraph{Manifold Anchor Regularization}
+Aggressively optimizing for functional targets (e.g., precise text rendering or strict spatial layout) frequently induces reward hacking, manifesting as a severe degradation in visual aesthetics and generative diversity~\cite{liu2025flow}. To decouple functional alignment from stylistic collapse, we introduce a continuous-time aesthetic preservation mechanism inspired by the Kullback-Leibler (KL) penalty in Flow-GRPO. 
+
+However, rather than anchoring to a generic pre-trained model, we maintain a frozen \textit{aesthetic teacher} (e.g., optimized via DeQA) to provide a high-fidelity regularizing vector field $v_{\text{base}}$. As previously derived, the Reverse KL divergence in the SDE framework elegantly translates to the time-weighted $L_2$ distance between vector fields. In our implementation, the optimization is formulated as minimizing a total loss $\mathcal{L}_{\text{Total}}(\theta)$, which is the direct sum of the policy loss $\mathcal{L}_{\text{Policy}}(\theta)$ (defined as the negative of the surrogate objective $-\mathcal{J}(\theta)$) and this dense KL penalty:
+\begin{equation}
+\mathcal{L}_{\text{Total}}(\theta) = \mathcal{L}_{\text{Policy}}(\theta) + \lambda \mathbb{E}_{c, t, x_t \sim \rho_t^\theta} \left[ w(t) \| v_\theta(x_t, t, c) - v_{\text{aesthetic}}(x_t, t, c) \|^2 \right]
+\end{equation}
+This KL regularization operates as a continuous elastic anchor. It guarantees that while the student policy greedily absorbs the functional intelligence from the multi-teacher ensemble, it remains strictly bounded to a high-quality visual manifold, completely averting the aesthetic degradation typical in single-objective RL.
