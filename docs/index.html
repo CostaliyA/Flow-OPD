@@ -17,13 +17,154 @@
 
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Flow-OPD: On-Policy Distillation for Flow Matching Models" />
-    <meta property="og:description" content="On-Policy Distillation for Generalist Flow Matching Text-to-Image Generation." />
+    <meta property="og:description" content="Replacing sparse scalar rewards with dense, trajectory-level, multi-teacher vector field supervision." />
 
     <meta name="twitter:card" content="summary" />
     <meta name="twitter:title" content="Flow-OPD" />
     <meta name="twitter:description" content="On-Policy Distillation for Generalist Flow Matching Text-to-Image Generation." />
 
     <link rel="stylesheet" href="styles.css" />
+    <style>
+      /* ===== Override vars for Flow-OPD palette ===== */
+      :root {
+        --blue: #5c6bc0;
+        --blue-soft: #eef0ff;
+        --blue-accent: #3949ab;
+        --shadow: 0 16px 40px rgba(92, 107, 192, 0.10);
+      }
+
+      /* ===== Pipeline Diagram ===== */
+      .pipeline-diagram {
+        display: flex;
+        align-items: stretch;
+        gap: 0;
+        margin: 24px 0 0;
+        overflow-x: auto;
+        padding-bottom: 6px;
+      }
+      .pipeline-step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: 130px;
+        flex: 1;
+      }
+      .pipeline-node {
+        background: var(--paper);
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        padding: 12px 14px;
+        text-align: center;
+        width: 100%;
+        margin-bottom: 6px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      .pipeline-node.p-base { border-color: #d1d5db; color: #6b7280; }
+      .pipeline-node.p-s1 { border-color: #c7d2fe; color: var(--blue); background: var(--blue-soft); }
+      .pipeline-node.p-s2 { border-color: #a5f3fc; color: #0891b2; background: #ecfeff; }
+      .pipeline-node.p-out { border-color: #fde68a; color: #b45309; background: #fffbeb; }
+      .pipeline-node.p-teacher {
+        border-color: #bbf7d0; color: #047857; background: #ecfdf5;
+        font-size: 12px; padding: 6px 10px; margin-bottom: 3px;
+      }
+      .pipeline-label { font-size: 11px; color: var(--muted); text-align: center; margin-bottom: 5px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; }
+      .pipeline-teacher-col { display: flex; flex-direction: column; gap: 3px; width: 100%; }
+      .pipeline-arrow { display: flex; align-items: center; padding: 0 6px; color: #d1d5db; font-size: 1.3rem; flex-shrink: 0; }
+
+      /* ===== Results Cards ===== */
+      .result-card.wide { grid-column: 1 / -1; }
+      .result-card { border: 1px solid var(--line); border-radius: 12px; padding: 20px; background: var(--soft); }
+      .result-card h3 { margin: 0 0 12px; font-size: 16px; }
+      .result-card p { margin: 0; color: var(--muted); font-size: 13px; }
+
+      /* ===== Image placeholder ===== */
+      .img-placeholder {
+        background: var(--soft);
+        border: 2px dashed var(--line);
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 220px;
+        text-align: center;
+        padding: 32px;
+        position: relative;
+        overflow: hidden;
+        margin: 20px 0;
+      }
+      .img-placeholder::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background: repeating-linear-gradient(
+          -45deg, transparent, transparent 12px,
+          rgba(223, 227, 232, 0.5) 12px, rgba(223, 227, 232, 0.5) 13px
+        );
+      }
+      .img-placeholder-inner { position: relative; z-index: 1; }
+      .img-placeholder .ip-icon { font-size: 2.2rem; margin-bottom: 10px; opacity: 0.35; }
+      .img-placeholder .ip-title { font-size: 14px; font-weight: 700; color: var(--ink); margin-bottom: 6px; }
+      .img-placeholder .ip-sub { font-size: 12px; color: var(--muted); max-width: 360px; line-height: 1.6; }
+
+      /* ===== Contributor Cards ===== */
+      .contrib-grid article { border: 1px solid var(--line); border-radius: 12px; padding: 20px; background: var(--soft); }
+      .contrib-grid h3 { margin: 0 0 10px; font-size: 15px; }
+      .contrib-grid p { margin: 0; color: var(--muted); font-size: 13px; }
+
+      /* ===== Key Stats Banner ===== */
+      .key-stats {
+        display: flex;
+        gap: 14px;
+        flex-wrap: wrap;
+        margin: 24px 0;
+      }
+      .key-stat {
+        flex: 1;
+        min-width: 140px;
+        background: var(--blue-soft);
+        border: 1px solid #c7d2fe;
+        border-radius: 12px;
+        padding: 18px 20px;
+        text-align: center;
+      }
+      .key-stat .ks-val {
+        font-size: 28px;
+        font-weight: 800;
+        color: var(--blue);
+        line-height: 1;
+      }
+      .key-stat .ks-label {
+        font-size: 12px;
+        color: var(--muted);
+        margin-top: 6px;
+        font-weight: 600;
+      }
+
+      /* ===== Citation block ===== */
+      .citation-block {
+        background: var(--soft);
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        padding: 20px 24px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+        color: var(--muted);
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-break: break-all;
+        line-height: 1.8;
+      }
+
+      /* ===== Responsive ===== */
+      @media (max-width: 680px) {
+        .pipeline-diagram { flex-direction: column; }
+        .pipeline-arrow { transform: rotate(90deg); padding: 4px 0; justify-content: center; }
+        .results-grid { grid-template-columns: 1fr !important; }
+        .key-stats { flex-direction: column; }
+      }
+    </style>
   </head>
   <body>
     <header class="topbar">
@@ -32,15 +173,18 @@
         <a href="#abstract">Abstract</a>
         <a href="#method">Method</a>
         <a href="#results">Results</a>
+        <a href="#gallery">Gallery</a>
         <a href="#bibtex">BibTeX</a>
       </nav>
     </header>
 
     <main id="top">
+      <!-- ===== HERO ===== -->
       <section class="hero paper-width">
         <h1>Flow-OPD: On-Policy Distillation for Flow Matching Models</h1>
         <p class="subtitle">
-          Replacing sparse scalar rewards with dense, trajectory-level, multi-teacher vector field supervision.
+          Replacing sparse scalar rewards with dense, trajectory-level, multi-teacher vector field supervision
+          for multi-task alignment of text-to-image diffusion models.
         </p>
 
         <div class="authors" aria-label="Authors">
@@ -59,8 +203,7 @@
         </div>
 
         <div class="affiliations">
-          <p><sup>1</sup>University of Science and Technology of China (USTC)</p>
-          <p><sup>2</sup>UCLA &nbsp;&middot;&nbsp; <sup>3</sup>CUHK &nbsp;&middot;&nbsp; <sup>4</sup>Xiaohongshu</p>
+          <p><sup>1</sup>University of Science and Technology of China (USTC) &nbsp;&middot;&nbsp; <sup>2</sup>UCLA &nbsp;&middot;&nbsp; <sup>3</sup>CUHK &nbsp;&middot;&nbsp; <sup>4</sup>Xiaohongshu</p>
           <p><sup>*</sup>Equal Contribution &nbsp;&middot;&nbsp; <sup>&#8224;</sup>Project Leader &nbsp;&middot;&nbsp; <sup>&#8225;</sup>Corresponding Author</p>
         </div>
 
@@ -71,7 +214,27 @@
         </div>
       </section>
 
+      <!-- ===== KEY STATS ===== -->
       <section class="section paper-width" id="abstract">
+        <div class="key-stats">
+          <div class="key-stat">
+            <div class="ks-val">+18pt</div>
+            <div class="ks-label">Avg. improvement vs. base</div>
+          </div>
+          <div class="key-stat">
+            <div class="ks-val">+8pt</div>
+            <div class="ks-label">vs. GRPO-Mix (best baseline)</div>
+          </div>
+          <div class="key-stat">
+            <div class="ks-val">0.92</div>
+            <div class="ks-label">GenEval (base: 0.63)</div>
+          </div>
+          <div class="key-stat">
+            <div class="ks-val">0.94</div>
+            <div class="ks-label">OCR accuracy (base: 0.59)</div>
+          </div>
+        </div>
+
         <h2>Abstract</h2>
         <p>
           We identify two critical bottlenecks in multi-task Flow Matching training: <strong>reward sparsity</strong>
@@ -84,78 +247,46 @@
         </p>
       </section>
 
-      <section class="section paper-width">
-        <h2>Problem and Contributions</h2>
-        <div class="contrib-grid">
-          <article>
-            <h3>Reward Sparsity</h3>
-            <p>
-              Scalar-valued rewards (e.g., a single OCR accuracy score) compress high-dimensional image space into
-              a single number. The model receives insufficient gradient signal to adjust thousands of dimensions
-              simultaneously.
-            </p>
-          </article>
-          <article>
-            <h3>Gradient Interference</h3>
-            <p>
-              Jointly optimizing heterogeneous objectives (text rendering, aesthetic quality, human preference) within
-              shared parameters causes divergent gradients to conflict, producing a zero-sum seesaw effect that
-              prevents meaningful progress.
-            </p>
-          </article>
-          <article>
-            <h3>Dense Vector Field Supervision</h3>
-            <p>
-              Each teacher acts as a Generative Reward Model (GRM), returning a full vector field
-              <code>v<sub>&#x03D5;k</sub></code> rather than a scalar. Dynamic routing selects domain experts,
-              eliminating reward sparsity.
-            </p>
-          </article>
-          <article>
-            <h3>Teacher-Surpassing Effect</h3>
-            <p>
-              The unified student outperforms individual teachers on OCR (0.94 vs 0.92) and DeQA (4.35 vs 4.23).
-              Simultaneous dense guidance from multiple experts forces the student to learn a more holistic
-              representation that bridges epistemic gaps of single teachers.
-            </p>
-          </article>
-        </div>
-      </section>
-
+      <!-- ===== METHOD ===== -->
       <section class="section paper-width" id="method">
-        <h2>Method Overview</h2>
+        <h2>Method</h2>
         <p>
-          Flow-OPD decouples expertise acquisition from model unification through a two-stage process: Cold Start
-          initialization followed by Multi-Teacher On-Policy Distillation.
+          Flow-OPD decouples expertise acquisition from model unification through a two-stage process:
+          <strong>Cold Start</strong> initialization followed by <strong>Multi-Teacher On-Policy Distillation</strong>.
         </p>
-        <figure class="paper-figure">
-          <div style="background: var(--soft); border: 1px solid var(--line); border-radius: 10px; padding: 24px; margin-top: 20px;">
-            <div style="display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; font-size: 14px; font-weight: 600;">
-              <div style="background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 10px 16px; text-align: center;">
-                <div style="font-size: 11px; color: var(--muted); margin-bottom: 4px;">Base Model</div>
-                <div>SD-3.5-M</div>
-              </div>
-              <div style="color: var(--muted); font-size: 20px;">&#8594;</div>
-              <div style="background: var(--blue-soft); border: 1px solid #c7d2fe; border-radius: 8px; padding: 10px 16px; text-align: center;">
-                <div style="font-size: 11px; color: var(--blue); margin-bottom: 4px;">Stage 1: Cold Start</div>
-                <div>SFT Init &nbsp;or&nbsp; Merge Init</div>
-              </div>
-              <div style="color: var(--muted); font-size: 20px;">&#8594;</div>
-              <div style="background: #ecfeff; border: 1px solid #a5f3fc; border-radius: 8px; padding: 10px 16px; text-align: center;">
-                <div style="font-size: 11px; color: #0891b2; margin-bottom: 4px;">Stage 2: OPD</div>
-                <div>Student &#9679;&#9679;&#9679; + Teachers</div>
-              </div>
-              <div style="color: var(--muted); font-size: 20px;">&#8594;</div>
-              <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 10px 16px; text-align: center;">
-                <div style="font-size: 11px; color: #b45309; margin-bottom: 4px;">Output</div>
-                <div>Unified Student</div>
-              </div>
+
+        <!-- Pipeline -->
+        <div class="pipeline-diagram">
+          <div class="pipeline-step">
+            <div class="pipeline-label">Base Model</div>
+            <div class="pipeline-node p-base">SD-3.5-M</div>
+          </div>
+          <div class="pipeline-arrow">&#8594;</div>
+          <div class="pipeline-step">
+            <div class="pipeline-label">Stage 1</div>
+            <div class="pipeline-node p-s1">Cold Start</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">SFT or Merge</div>
+          </div>
+          <div class="pipeline-arrow">&#8594;</div>
+          <div class="pipeline-step">
+            <div class="pipeline-label">Stage 2</div>
+            <div class="pipeline-node p-s2">Student &#9679;&#9679;&#9679;</div>
+            <div class="pipeline-label" style="margin-top:6px;">Teachers</div>
+            <div class="pipeline-teacher-col">
+              <div class="pipeline-node p-teacher">GenEval</div>
+              <div class="pipeline-node p-teacher">OCR</div>
+              <div class="pipeline-node p-teacher">DeQA</div>
+              <div class="pipeline-node p-teacher">PickScore</div>
             </div>
           </div>
-          <figcaption>Flow-OPD two-stage pipeline: Cold Start initialization followed by Multi-Teacher On-Policy Distillation.</figcaption>
-        </figure>
+          <div class="pipeline-arrow">&#8594;</div>
+          <div class="pipeline-step">
+            <div class="pipeline-label">Output</div>
+            <div class="pipeline-node p-out">Unified Student</div>
+          </div>
+        </div>
 
-        <div class="contrib-grid" style="margin-top: 24px;">
+        <div class="contrib-grid">
           <article>
             <h3>Cold Start Initialization</h3>
             <p>
@@ -174,22 +305,23 @@
           <article>
             <h3>Multi-Teacher Dense Labeling</h3>
             <p>
-              Each teacher acts as a <strong>Generative Reward Model (GRM)</strong>, returning a full vector field
+              Each teacher acts as a Generative Reward Model (GRM), returning a full vector field
               <code>v<sub>&#x03D5;k</sub></code>. Dynamic routing <code>&#x03B1;<sub>k</sub></code> selects
-              domain experts from GenEval, OCR, DeQA, and PickScore.
+              domain experts from GenEval, OCR, DeQA and PickScore.
             </p>
           </article>
           <article>
             <h3>MAR: Manifold Anchor Regularization</h3>
             <p>
               A task-agnostic aesthetic teacher prevents background mode collapse and semantic redundancy.
-              The KL regularization from the aesthetic teacher acts as a continuous elastic anchor, decoupling
+              KL regularization from the aesthetic teacher acts as a continuous elastic anchor, decoupling
               functional alignment from stylistic preservation.
             </p>
           </article>
         </div>
       </section>
 
+      <!-- ===== RESULTS ===== -->
       <section class="section paper-width" id="results">
         <h2>Main Results</h2>
         <p class="note">
@@ -198,34 +330,33 @@
         </p>
 
         <div class="results-grid">
+          <!-- Overall table -->
           <article class="result-card wide">
-            <h3>Overall Performance</h3>
+            <h3>Overall Performance &mdash; Multi-Task Alignment on SD-3.5-M</h3>
             <div class="table-scroll">
               <table class="results-table category-table">
                 <thead>
                   <tr><th>Model</th><th>GenEval &#8593;</th><th>OCR Acc. &#8593;</th><th>DeQA &#8593;</th><th>PickScore &#8593;</th><th>Average &#8593;</th></tr>
                 </thead>
                 <tbody>
-                  <tr><td>SD-3.5-M (base)</td><td>0.63</td><td>0.59</td><td>4.07</td><td>21.64</td><td>0.72</td></tr>
+                  <tr style="color: var(--muted);"><td>SD-3.5-M (base)</td><td>0.63</td><td>0.59</td><td>4.07</td><td>21.64</td><td>0.72</td></tr>
                   <tr><td>+ GRPO-GenEval</td><td>0.94</td><td>0.65</td><td>4.01</td><td>21.53</td><td>0.81</td></tr>
                   <tr><td>+ GRPO-OCR</td><td>0.64</td><td>0.92</td><td>4.06</td><td>21.69</td><td>0.80</td></tr>
                   <tr><td>+ GRPO-DeQA</td><td>0.64</td><td>0.66</td><td>4.23</td><td>23.02</td><td>0.76</td></tr>
                   <tr><td>+ GRPO-PickScore</td><td>0.51</td><td>0.69</td><td>4.22</td><td>23.19</td><td>0.73</td></tr>
                   <tr><td>GRPO-Mix (3:1:1)</td><td>0.73</td><td>0.83</td><td>4.33</td><td>21.84</td><td>0.82</td></tr>
                   <tr><td>Ours &mdash; SFT Init</td><td>0.91</td><td>0.92</td><td>4.29</td><td>21.83</td><td>0.88</td></tr>
-                  <tr class="highlight"><td>Ours &mdash; Merge Init</td><td>0.92</td><td>0.94</td><td>4.35</td><td>23.08</td><td>0.90</td></tr>
+                  <tr class="highlight"><td><strong>Ours &mdash; Merge Init</strong></td><td><strong>0.92</strong></td><td><strong>0.94</strong></td><td><strong>4.35</strong></td><td><strong>23.08</strong></td><td><strong>0.90</strong></td></tr>
                 </tbody>
               </table>
             </div>
           </article>
 
+          <!-- Cold Start ablation -->
           <article class="result-card">
             <h3>Cold Start Ablation</h3>
-            <p style="font-size: 13px; color: var(--muted); margin-bottom: 12px;">
-              T2I-CompBench (OOD Generalization). Both SFT and Model Merging provide effective cold-start foundations.
-              Model Merging optimally leverages homogeneous teacher priors without additional training cost.
-            </p>
-            <div class="table-scroll">
+            <p>T2I-CompBench (OOD Generalization). Model Merging optimally leverages homogeneous teacher priors without additional training cost.</p>
+            <div class="table-scroll" style="margin-top: 12px;">
               <table class="results-table metric-table">
                 <thead>
                   <tr><th>Model</th><th>Color</th><th>Shape</th><th>3D-Spatial</th><th>Numeracy</th><th>Overall</th></tr>
@@ -233,19 +364,17 @@
                 <tbody>
                   <tr><td>GRPO-Mix</td><td>0.692</td><td>0.611</td><td>0.422</td><td>0.641</td><td>0.587</td></tr>
                   <tr><td>Cold Start (w/o OPD)</td><td>0.710</td><td>0.613</td><td>0.425</td><td>0.646</td><td>0.595</td></tr>
-                  <tr class="highlight"><td>Flow-OPD (Merge Init)</td><td>0.719</td><td>0.629</td><td>0.457</td><td>0.684</td><td>0.618</td></tr>
+                  <tr class="highlight"><td><strong>Flow-OPD (Merge Init)</strong></td><td><strong>0.719</strong></td><td><strong>0.629</strong></td><td><strong>0.457</strong></td><td><strong>0.684</strong></td><td><strong>0.618</strong></td></tr>
                 </tbody>
               </table>
             </div>
           </article>
 
+          <!-- MAR ablation -->
           <article class="result-card">
             <h3>MAR Ablation</h3>
-            <p style="font-size: 13px; color: var(--muted); margin-bottom: 12px;">
-              MAR prevents reward hacking by anchoring optimization to a task-agnostic aesthetic manifold.
-              Removing MAR causes significant degradation across all quality and preference metrics.
-            </p>
-            <div class="table-scroll">
+            <p>MAR prevents reward hacking by anchoring optimization to a task-agnostic aesthetic manifold.</p>
+            <div class="table-scroll" style="margin-top: 12px;">
               <table class="results-table metric-table">
                 <thead>
                   <tr><th>Model</th><th>ImageReward &#8593;</th><th>Aesthetic &#8593;</th><th>HPS-v2.1 &#8593;</th><th>QwenVL &#8593;</th></tr>
@@ -254,30 +383,51 @@
                   <tr><td>SD-3.5-M (base)</td><td>1.02</td><td>5.87</td><td>0.298</td><td>3.45</td></tr>
                   <tr><td>GRPO-Mix</td><td>1.23</td><td>5.93</td><td>0.310</td><td>3.88</td></tr>
                   <tr><td>Flow-OPD w/o MAR</td><td>1.26</td><td>5.89</td><td>0.300</td><td>3.82</td></tr>
-                  <tr class="highlight"><td>Flow-OPD (w/ MAR)</td><td>1.36</td><td>6.23</td><td>0.330</td><td>4.05</td></tr>
+                  <tr class="highlight"><td><strong>Flow-OPD (w/ MAR)</strong></td><td><strong>1.36</strong></td><td><strong>6.23</strong></td><td><strong>0.330</strong></td><td><strong>4.05</strong></td></tr>
                 </tbody>
               </table>
             </div>
           </article>
         </div>
 
-        <div class="stat-grid" style="margin-top: 24px;">
-          <div><strong>+18pt</strong><span>avg. improvement vs. base</span></div>
-          <div><strong>+8pt</strong><span>vs. GRPO-Mix (best baseline)</span></div>
-          <div><strong>+29pt</strong><span>GenEval gain: 0.63 &rarr; 0.92</span></div>
-          <div><strong>+35pt</strong><span>OCR gain: 0.59 &rarr; 0.94</span></div>
+        <!-- ===== SUBJECTIVE IMAGE #1 ===== -->
+        <div class="img-placeholder" style="margin-top: 32px;">
+          <div class="img-placeholder-inner">
+            <div class="ip-icon">&#128247;</div>
+            <div class="ip-title">Subjective Image 1 &mdash; Qualitative Results</div>
+            <div class="ip-sub">
+              Replace this placeholder with your generated image comparison (e.g., GRPO-Mix vs. Flow-OPD
+              on GenEval, OCR, and PickScore prompts). Suggested size: 1200&times;400px.
+            </div>
+          </div>
+        </div>
+
+        <!-- ===== SUBJECTIVE IMAGE #2 ===== -->
+        <div class="img-placeholder" style="margin-top: 16px;">
+          <div class="img-placeholder-inner">
+            <div class="ip-icon">&#127912;</div>
+            <div class="ip-title">Subjective Image 2 &mdash; Method Visualization</div>
+            <div class="ip-sub">
+              Replace this placeholder with your second image (e.g., training curves, vector field
+              visualization, or MAR effect). Suggested size: 1200&times;400px.
+            </div>
+          </div>
         </div>
       </section>
 
+      <!-- ===== BIBTEX ===== -->
       <section class="section paper-width" id="bibtex">
         <h2>BibTeX</h2>
-        <pre><code>@article{flowopd2026,
-  title = {Flow-OPD: On-Policy Distillation for Flow Matching Models},
-  author = {Zhen Fang and Wenxuan Huang and Yu Zeng and Yiming Zhao
-            and Shuang Chen and Kaituo Feng and Yunlong Lin and Jie Liu
-            and Lin Chen and Zehui Chen and Shaosheng Cao and Feng Zhao},
-  year = {2026}
-}</code></pre>
+        <div class="citation-block">@article{flowopd2026,
+  title   = {Flow-OPD: On-Policy Distillation for Flow Matching Models},
+  author  = {Zhen Fang and Wenxuan Huang and Yu Zeng and Yiming Zhao
+             and Shuang Chen and Kaituo Feng and Yunlong Lin and Jie Liu
+             and Lin Chen and Zehui Chen and Shaosheng Cao and Feng Zhao},
+  year    = {2026}
+}</div>
+        <div style="margin-top: 16px;">
+          <button class="button" onclick="copyCitation()" style="cursor:pointer;">Copy Citation</button>
+        </div>
       </section>
     </main>
 
@@ -286,5 +436,23 @@
     </footer>
 
     <script src="script.js"></script>
+    <script>
+      function copyCitation() {
+        const text = `@article{flowopd2026,
+  title   = {Flow-OPD: On-Policy Distillation for Flow Matching Models},
+  author  = {Zhen Fang and Wenxuan Huang and Yu Zeng and Yiming Zhao
+             and Shuang Chen and Kaituo Feng and Yunlong Lin and Jie Liu
+             and Lin Chen and Zehui Chen and Shaosheng Cao and Feng Zhao},
+  year    = {2026}
+}`;
+        navigator.clipboard.writeText(text).then(() => {
+          const btn = event.target.closest('.button');
+          const orig = btn.textContent;
+          btn.textContent = 'Copied!';
+          btn.style.color = 'var(--green)';
+          setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 2000);
+        });
+      }
+    </script>
   </body>
 </html>

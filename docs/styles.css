@@ -273,8 +273,8 @@ figcaption {
 .contrib-grid article,
 .result-card {
   border: 1px solid var(--line);
-  border-radius: 10px;
-  padding: 18px;
+  border-radius: 12px;
+  padding: 20px;
   background: var(--soft);
 }
 
@@ -284,14 +284,17 @@ figcaption {
 
 .contrib-grid h3,
 .result-card h3 {
-  margin: 0 0 8px;
-  font-size: 18px;
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--ink);
 }
 
 .contrib-grid p,
 .result-card p {
   margin: 0;
   color: var(--muted);
+  font-size: 13px;
 }
 
 .stat-grid {
@@ -531,6 +534,214 @@ pre {
   border-radius: 10px;
   background: #f3f4f6;
   font-size: 13px;
+}
+
+/* ===== Key Stats Banner ===== */
+.key-stats {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin: 0 0 32px;
+}
+
+.key-stat {
+  flex: 1;
+  min-width: 140px;
+  background: var(--blue-soft);
+  border: 1px solid #c7d2fe;
+  border-radius: 12px;
+  padding: 18px 20px;
+  text-align: center;
+}
+
+.key-stat .ks-val {
+  font-size: 28px;
+  font-weight: 800;
+  color: var(--blue);
+  line-height: 1;
+}
+
+.key-stat .ks-label {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 6px;
+  font-weight: 600;
+}
+
+/* ===== Image Placeholder ===== */
+.img-placeholder {
+  background: var(--soft);
+  border: 2px dashed var(--line);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 220px;
+  text-align: center;
+  padding: 32px;
+  position: relative;
+  overflow: hidden;
+}
+
+.img-placeholder::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    -45deg,
+    transparent, transparent 12px,
+    rgba(223, 227, 232, 0.5) 12px, rgba(223, 227, 232, 0.5) 13px
+  );
+}
+
+.img-placeholder-inner {
+  position: relative;
+  z-index: 1;
+}
+
+.img-placeholder .ip-icon {
+  font-size: 2.2rem;
+  margin-bottom: 10px;
+  opacity: 0.35;
+}
+
+.img-placeholder .ip-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+
+.img-placeholder .ip-sub {
+  font-size: 12px;
+  color: var(--muted);
+  max-width: 360px;
+  line-height: 1.6;
+}
+
+/* ===== Citation Block ===== */
+.citation-block {
+  background: var(--soft);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 20px 24px;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 12px;
+  color: var(--muted);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.8;
+}
+
+/* ===== Pipeline Diagram ===== */
+.pipeline-diagram {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  margin: 24px 0 0;
+  overflow-x: auto;
+  padding-bottom: 6px;
+}
+
+.pipeline-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 130px;
+  flex: 1;
+}
+
+.pipeline-node {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+  text-align: center;
+  width: 100%;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.pipeline-node.p-base {
+  border-color: #d1d5db;
+  color: #6b7280;
+}
+
+.pipeline-node.p-s1 {
+  border-color: #c7d2fe;
+  color: var(--blue);
+  background: var(--blue-soft);
+}
+
+.pipeline-node.p-s2 {
+  border-color: #a5f3fc;
+  color: #0891b2;
+  background: #ecfeff;
+}
+
+.pipeline-node.p-out {
+  border-color: #fde68a;
+  color: #b45309;
+  background: #fffbeb;
+}
+
+.pipeline-node.p-teacher {
+  border-color: #bbf7d0;
+  color: #047857;
+  background: #ecfdf5;
+  font-size: 12px;
+  padding: 6px 10px;
+  margin-bottom: 3px;
+}
+
+.pipeline-label {
+  font-size: 11px;
+  color: var(--muted);
+  text-align: center;
+  margin-bottom: 5px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.pipeline-teacher-col {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+}
+
+.pipeline-arrow {
+  display: flex;
+  align-items: center;
+  padding: 0 6px;
+  color: #d1d5db;
+  font-size: 1.3rem;
+  flex-shrink: 0;
+}
+
+/* ===== Responsive overrides ===== */
+@media (max-width: 680px) {
+  .pipeline-diagram {
+    flex-direction: column;
+  }
+
+  .pipeline-arrow {
+    transform: rotate(90deg);
+    padding: 4px 0;
+    justify-content: center;
+  }
+
+  .results-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .key-stats {
+    flex-direction: column;
+  }
 }
 
 .footer {
