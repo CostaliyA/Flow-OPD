@@ -71,4 +71,4 @@ The key innovations include:
 
 ## Acknowledgements
 
-We sincerely thank the [flow-grpo](https://github.com/huggingface/flow-grpo) project for providing foundational insights into applying GRPO to flow matching models, which inspired key aspects of Flow-OPD's design.
+This repo is based on [flow-grpo](https://github.com/yifan123/flow_grpo). We thank the authors for their valuable contributions to the AIGC community.
