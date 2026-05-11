@@ -1,8 +1,6 @@
 # Flow-OPD: On-Policy Distillation for Flow Matching Models
 
-<p align="center">
-  <img src="assets/logo.png" alt="Flow-OPD Logo" width="200"/>
-</p>
+
 
 <div align="center">
 
