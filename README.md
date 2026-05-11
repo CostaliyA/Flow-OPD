@@ -3,7 +3,7 @@
 <div align="center">
 
 [![Project Page](https://img.shields.io/badge/Project%20Page-WebPage-green)](https://costaliya.github.io/Flow-OPD/)
-[![Paper](https://img.shields.io/badge/Paper-arXiv:2505.XXXXX-red)](https://arxiv.org/abs/2605.08063)
+[![Paper](https://img.shields.io/badge/Paper-arXiv:2605.08063-red)](https://arxiv.org/abs/2605.08063)
 [![Code](https://img.shields.io/badge/Code-GitHub-blue)](https://github.com/CostaliyA/Flow-OPD)
 [![Model](https://img.shields.io/badge/Model-HuggingFace-yellow)](https://huggingface.co/CostaliyA/Flow-OPD)
 
