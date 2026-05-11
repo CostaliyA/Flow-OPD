@@ -3,7 +3,7 @@
 <div align="center">
 
 [![Project Page](https://img.shields.io/badge/Project%20Page-WebPage-green)](https://costaliya.github.io/Flow-OPD/)
-[![Paper](https://img.shields.io/badge/Paper-arXiv:2505.XXXXX-red)](https://github.com/CostaliyA/Flow-OPD/blob/main/flow-opd.pdf)
+[![Paper](https://img.shields.io/badge/Paper-arXiv:2505.XXXXX-red)](https://arxiv.org/abs/2605.08063)
 [![Code](https://img.shields.io/badge/Code-GitHub-blue)](https://github.com/CostaliyA/Flow-OPD)
 [![Model](https://img.shields.io/badge/Model-HuggingFace-yellow)](https://huggingface.co/CostaliyA/Flow-OPD)
 
@@ -58,12 +58,14 @@ The key innovations include:
 ## Citation
 
 ```bibtex
-@article{flowopd2026,
-  title   = {Flow-OPD: On-Policy Distillation for Flow Matching Models},
-  author  = {Zhen Fang and Wenxuan Huang and Yu Zeng and Yiming Zhao
-             and Shuang Chen and Kaituo Feng and Yunlong Lin and Jie Liu
-             and Lin Chen and Zehui Chen and Shaosheng Cao and Feng Zhao},
-  year    = {2026}
+@misc{fang2026flowopdonpolicydistillationflow,
+      title={Flow-OPD: On-Policy Distillation for Flow Matching Models}, 
+      author={Zhen Fang and Wenxuan Huang and Yu Zeng and Yiming Zhao and Shuang Chen and Kaituo Feng and Yunlong Lin and Lin Chen and Zehui Chen and Shaosheng Cao and Feng Zhao},
+      year={2026},
+      eprint={2605.08063},
+      archivePrefix={arXiv},
+      primaryClass={cs.CV},
+      url={https://arxiv.org/abs/2605.08063}, 
 }
 ```
 
