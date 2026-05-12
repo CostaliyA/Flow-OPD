@@ -109,6 +109,57 @@ bash scripts/single_node/sd3_opd_example.sh
 A local implementation example of Flow-OPD (single-teacher). It can be easily adapted into OPSD or Teacher-Student Learning.
 Multi-teacher systems require interaction between nodes; this is still under review and will be open-sourced vert soon.
 
+## 📊 Evaluation
+
+This section describes how to evaluate your trained LoRA model on **T2I-CompBench**.
+
+### 1. Generate Images
+
+First, run `run_eval.sh` to generate images for all T2I-CompBench categories:
+
+```bash
+bash scripts/single_node/run_eval.sh
+```
+
+Modify `run_eval.sh` to set your LoRA path and output directory:
+
+```bash
+torchrun --nproc_per_node=8 scripts/eval_t2icompbench.py \
+    --lora "path/to/your/lora" \
+    --benchmark t2i_compbench \
+    --output_dir ./eval_results/compbench_images
+```
+
+Images will be saved under `{output_dir}/{category}/samples/`.
+
+### 2. Install T2I-CompBench
+
+Clone the T2I-CompBench repository and install its dependencies:
+
+```bash
+git clone https://github.com/Karine-Huang/T2I-CompBench.git
+cd T2I-CompBench
+# Follow the installation instructions in their repository
+```
+
+### 3. Score Images
+
+Set `T2I_COMP_CODE_ROOT` in `cal_t2i_compbench_value.sh` to point to the cloned T2I-CompBench folder:
+
+```bash
+T2I_COMP_CODE_ROOT="/path/to/T2I-CompBench"
+```
+
+Then run the scoring script:
+
+```bash
+bash cal_t2i_compbench_value.sh
+```
+
+Results for each category will be saved as txt files under the corresponding annotation directories.
+
+---
+
 ## 🎯 Key Results
 
 | Model | GenEval | OCR Acc. | DeQA | PickScore | Average |
@@ -140,6 +191,7 @@ The key innovations include:
 ---
 
 ## 📋 Todo List
+The code is being gradually open-sourced, optimized, and refactored. Please feel free to contact me if you have any questions.
 
 ### 🔄 In Progress
 
