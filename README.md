@@ -14,6 +14,85 @@
 </div>
 
 ---
+## 🚀 Quick Started
+### 1. Environment Set Up
+Clone this repository and install packages.
+```bash
+git clone https://github.com/CostaliyA/Flow-OPD.git
+cd flow_OPD
+conda create -n flow_grpo python=3.10.16
+pip install -e .
+```
+
+### 2. Model Download
+To avoid redundant downloads and potential storage waste during multi-GPU training, please pre-download the required models in advance.
+
+**Models**
+* **SD3.5**: `stabilityai/stable-diffusion-3.5-medium`
+* **Flux**: `black-forest-labs/FLUX.1-dev`
+
+**Reward Models**
+* **PickScore**:
+  * `laion/CLIP-ViT-H-14-laion2B-s32B-b79K`
+  * `yuvalkirstain/PickScore_v1`
+* **CLIPScore**: `openai/clip-vit-large-patch14`
+* **Aesthetic Score**: `openai/clip-vit-large-patch14`
+
+
+### 3. Reward Preparation
+The steps above only install the current repository. Since each reward model may rely on different versions, combining them in one Conda environment can cause version conflicts. To avoid this, we adopt a remote server setup inspired by ddpo-pytorch. You only need to install the specific reward model you plan to use.
+
+#### GenEval
+Please create a new Conda virtual environment and install the corresponding dependencies according to the instructions in [reward-server](https://github.com/yifan123/reward-server).
+
+#### OCR
+Please install paddle-ocr:
+```bash
+pip install paddlepaddle-gpu==2.6.2
+pip install paddleocr==2.9.1
+pip install python-Levenshtein
+```
+Then, pre-download the model using the Python command line:
+```python
+from paddleocr import PaddleOCR
+ocr = PaddleOCR(use_angle_cls=False, lang="en", use_gpu=False, show_log=False)
+```
+
+#### Pickscore
+PickScore requires no additional installation. Note that the original [pickscore](https://huggingface.co/datasets/yuvalkirstain/pickapic_v1) dataset corresponds to `dataset/pickscore` in this repository, containing some NSFW prompts. We strongly recommend using [pickapic\_v1\_no\_images\_training\_sfw](https://huggingface.co/datasets/CarperAI/pickapic_v1_no_images_training_sfw), the SFW version of the Pick-a-Pic dataset, which corresponds to `dataset/pickscore_sfw` in this repository.
+
+#### DeQA
+Please create a new Conda virtual environment and install the corresponding dependencies according to the instructions in [reward-server](https://github.com/yifan123/reward-server).
+
+#### UnifiedReward
+Since `sglang` may conflict with other environments, we recommend creating a new conda environment.
+```bash
+conda create -n sglang python=3.10.16
+conda activate sglang
+pip install "sglang[all]"
+```
+We use sglang to deploy the reward service. After installing sglang, please run the following command to launch UnifiedReward:
+```bash
+python -m sglang.launch_server --model-path CodeGoat24/UnifiedReward-7b-v1.5 --api-key flowgrpo --port 17140 --chat-template chatml-llava --enable-p2p-check --mem-fraction-static 0.85
+```
+#### ImageReward
+Please install imagereward:
+```bash
+pip install image-reward
+pip install git+https://github.com/openai/CLIP.git
+```
+#### QwenVL score
+Please create a new Conda virtual environment with vllm:
+```bash
+pip install vllm
+bash scripts/single_node/run_qwen_model.sh
+```
+and then change Line 130 (base_url) in rewards.py
+
+### 4. Start Training
+
+#### GRPO-mix
+
 
 ## 🎯 Key Results
 
@@ -54,7 +133,7 @@ The key innovations include:
 ### ✅ Completed
 
 - [x] Release model weights ([HuggingFace](https://huggingface.co/CostaliyA/Flow-OPD))
-- [x] Release paper ([arXiv](https://github.com/CostaliyA/Flow-OPD/blob/main/flow-opd.pdf))
+- [x] Release paper ([arXiv](https://arxiv.org/abs/2605.08063))
 
 ---
 
