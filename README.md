@@ -19,7 +19,7 @@
 Clone this repository and install packages.
 ```bash
 git clone https://github.com/CostaliyA/Flow-OPD.git
-cd flow_OPD
+cd Flow_OPD
 conda create -n flow_grpo python=3.10.16
 pip install -e .
 ```
@@ -92,7 +92,22 @@ and then change Line 130 (base_url) in rewards.py
 ### 4. Start Training
 
 #### GRPO-mix
+First, the GenEval rewarder and deqa services need to be deployed on other nodes.
+```bash
+# Master node
+bash scripts/multi_node/sd3_mix.sh 0
+# Other nodes
+bash scripts/multi_node/sd3_mix.sh 1
+bash scripts/multi_node/sd3_mix.sh 2
+bash scripts/multi_node/sd3_mix.sh 3
+```
 
+#### Flow-OPD
+```bash
+bash scripts/single_node/sd3_opd_example.sh
+```
+A local implementation example of Flow-OPD (single-teacher). It can be easily adapted into OPSD or Teacher-Student Learning.
+Multi-teacher systems require interaction between nodes; this is still under review and will be open-sourced vert soon.
 
 ## 🎯 Key Results
 
