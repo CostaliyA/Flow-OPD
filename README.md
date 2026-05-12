@@ -111,7 +111,7 @@ Multi-teacher systems require interaction between nodes; this is still under rev
 
 ## 📊 Evaluation
 
-This section describes how to evaluate your trained LoRA model on **T2I-CompBench**.
+This section describes how to evaluate your trained LoRA model on **T2I-CompBench**, based on the evaluation pipeline from [STAGE](https://github.com/krennic999/STAGE).
 
 ### 1. Generate Images
 
@@ -246,4 +246,4 @@ The code is being gradually open-sourced, optimized, and refactored. Please feel
 
 ## 🙏 Acknowledgements
 
-This repo is based on [flow-grpo](https://github.com/yifan123/flow_grpo). We thank the authors for their valuable contributions to the AIGC community.
+This repo is based on [flow-grpo](https://github.com/yifan123/flow_grpo). We also build upon [STAGE](https://github.com/krennic999/STAGE) for T2I-CompBench evaluation. We thank the authors for their valuable contributions to the AIGC community.
