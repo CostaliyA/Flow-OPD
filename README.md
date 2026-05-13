@@ -89,9 +89,13 @@ bash scripts/single_node/run_qwen_model.sh
 ```
 and then change Line 130 (base_url) in rewards.py
 
-### 4. Start Training
+### 4. Dataset Preparation
 
-#### GRPO-mix
+> **Note:** All training and evaluation prompts are located in the `dataset/` folder. Training prompts follow the format used in [flow-grpo](https://github.com/yifan123/flow_grpo), and evaluation prompts follow [T2I-CompBench](https://github.com/Karine-Huang/T2I-CompBench).
+
+### 5. Start Training
+
+#### 5.1 GRPO-mix
 First, the GenEval rewarder and deqa services need to be deployed on other nodes.
 ```bash
 # Master node
@@ -102,7 +106,7 @@ bash scripts/multi_node/sd3_mix.sh 2
 bash scripts/multi_node/sd3_mix.sh 3
 ```
 
-#### Flow-OPD
+#### 5.2 Flow-OPD
 ```bash
 bash scripts/single_node/sd3_opd_example.sh
 ```
