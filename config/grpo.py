@@ -72,6 +72,93 @@ def general_ocr_sd3_8gpu_opd():
     config.per_prompt_stat_tracking = True
     return config
 
+def mix_opd_8gpu():
+    gpu_number = 8
+    config = base.get_config()
+
+    config.pretrained.model = "path/to/stable-diffusion-3.5-medium"
+
+    # Sampling
+    config.sample.num_steps = 10
+    config.sample.eval_num_steps = 40
+    config.sample.guidance_scale = 4.5
+    config.sample.eval_guidance_scale = 4.5
+    config.resolution = 512
+    config.sample.global_std = True
+    config.sample.same_latent = False
+
+    # Batch & dataloader
+    config.sample.train_batch_size = 4
+    config.sample.num_image_per_prompt = 16
+    config.sample.num_batches_per_epoch = int(
+        16/ (gpu_number * config.sample.train_batch_size / config.sample.num_image_per_prompt)
+    )
+    assert config.sample.num_batches_per_epoch % 2 == 0, \
+        "num_batches_per_epoch must be even for gradient accumulation"
+    config.sample.test_batch_size = 9
+
+    config.train.batch_size = config.sample.train_batch_size
+    config.train.gradient_accumulation_steps = config.sample.num_batches_per_epoch // 2
+    config.train.num_inner_epochs = 1
+    config.train.timestep_fraction = 0.99
+    config.train.learning_rate = 1e-4
+    # KL ratio (global beta across all datasets)
+    config.train.beta = 0.04
+    config.train.kl_reward_level = "step_wise"
+    config.train.kl_scale = -1
+    config.train.reward_mode = "kl_only"  # no outcome reward, pure KL-based OPD
+    config.train.ema = True
+
+    # LoRA
+    config.use_lora = True
+
+    # Checkpointing
+    config.save_freq = 60
+    config.eval_freq = 60
+    config.save_dir = 'logs/multi_opd/sd3.5-M/opd-mix'
+
+    # Per-prompt stat tracking
+    config.per_prompt_stat_tracking = True
+
+    # =============================================================
+    # Multi-dataset alternate training configuration
+    # Each entry maps to its own kl_ref_lora_path (LoRA+base reference)
+    # =============================================================
+    config.alternate_datasets = [
+        {
+            "name": "ocr",
+            "path": os.path.join(os.getcwd(), "dataset/ocr"),
+            "prompt_fn": "general_ocr",
+            "reward_fn": {"ocr": 1.0},
+            "kl_ref_lora_path": "path/SD3.5M-FlowGRPO-Text",
+            "epochs_per_cycle": 1,
+            "test_batch_size": 9,
+        },
+        {
+            "name": "geneval",
+            "path": os.path.join(os.getcwd(), "dataset/geneval"),
+            "prompt_fn": "geneval",
+            "reward_fn": {"geneval": 1.0},
+            "kl_ref_lora_path": "path/SD3.5M-FlowGRPO-GenEval",
+            "epochs_per_cycle": 3,
+            "test_batch_size": 11,
+        },
+        # {
+        #     "name": "pickscore",
+        #     "path": os.path.join(os.getcwd(), "dataset/pickscore"),
+        #     "prompt_fn": "general_ocr",
+        #     "reward_fn": {"pickscore": 1.0},
+        #     "kl_ref_lora_path": "/SD3.5M-FlowGRPO-pick",
+        #     "epochs_per_cycle": 1,
+        #     "test_batch_size": 9,
+        # },
+    ]
+    config.training_mode = "alternate"
+
+    config.run_name = "mix_opd_8gpu"
+    return config
+
+
 def geneval_ocr_deqa_pickscore_32gpu():
     gpu_number = 32
     config = compressibility()

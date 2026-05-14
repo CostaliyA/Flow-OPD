@@ -108,10 +108,14 @@ bash scripts/multi_node/sd3_mix.sh 3
 
 #### 5.2 Flow-OPD
 ```bash
+# Single-teacher OPD (local single-node, single GPU or multi-GPU)
 bash scripts/single_node/sd3_opd_example.sh
+
+# Multi-teacher OPD (local single-node, multi-GPU)
+bash scripts/single_node/sd3_opd_mix_local.sh
 ```
-A local implementation example of Flow-OPD (single-teacher). It can be easily adapted into OPSD or Teacher-Student Learning.
-Multi-teacher systems require interaction between nodes; this is still under review and will be open-sourced vert soon.
+- **Single-teacher**: Uses a single `kl_ref_lora_path` reference for OPD KL reward.
+- **Multi-teacher**: Uses `alternate` training mode with per-dataset `kl_ref_lora_path` — each dataset (e.g., OCR, GenEval) uses its own teacher LoRA. Currently configured with 8 GPUs in `mix_opd_8gpu`. Reduce `num_processes` in the shell script and adjust batch sizes in `config/grpo.py:mix_opd_8gpu` for fewer GPUs.
 
 ## 📊 Evaluation
 
