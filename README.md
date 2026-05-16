@@ -239,14 +239,11 @@ The code is being gradually open-sourced, optimized, and refactored. Please feel
 ## 📚 Citation
 
 ```bibtex
-@misc{fang2026flowopdonpolicydistillationflow,
-      title={Flow-OPD: On-Policy Distillation for Flow Matching Models},
-      author={Zhen Fang and Wenxuan Huang and Yu Zeng and Yiming Zhao and Shuang Chen and Kaituo Feng and Yunlong Lin and Lin Chen and Zehui Chen and Shaosheng Cao and Feng Zhao},
-      year={2026},
-      eprint={2605.08063},
-      archivePrefix={arXiv},
-      primaryClass={cs.CV},
-      url={https://arxiv.org/abs/2605.08063},
+@article{fang2026flow,
+  title={Flow-OPD: On-Policy Distillation for Flow Matching Models},
+  author={Fang, Zhen and Huang, Wenxuan and Zeng, Yu and Zhao, Yiming and Chen, Shuang and Feng, Kaituo and Lin, Yunlong and Chen, Lin and Chen, Zehui and Cao, Shaosheng and others},
+  journal={arXiv preprint arXiv:2605.08063},
+  year={2026}
 }
 ```
 
