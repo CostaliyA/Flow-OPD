@@ -400,6 +400,7 @@ def main(_):
     if accelerator.is_main_process:
         wandb.init(
             project="flow_grpo",
+            name=config.run_name
         )
         # accelerator.init_trackers(
         #     project_name="flow-grpo",
@@ -497,6 +498,18 @@ def main(_):
     else:
         # Fallback: use base model without LoRA
         ref_transformer = ref_pipeline.transformer
+    
+    # Load Mar LoRA for KL loss (policy vs Mar LoRA+base)
+    mar_transformer = None
+    if config.train.get("mar_lora") and config.train.mar_lora != "":
+        mar_pipeline = StableDiffusion3Pipeline.from_pretrained(
+            config.pretrained.model
+        )
+        mar_pipeline.transformer.requires_grad_(False)
+        mar_pipeline.transformer.to(accelerator.device)
+        mar_transformer = PeftModel.from_pretrained(mar_pipeline.transformer, config.train.mar_lora)
+        mar_transformer.set_adapter("default")
+        mar_transformer.eval()
     
     # Enable TF32 for faster training on Ampere GPUs,
     # cf https://pytorch.org/docs/stable/notes/cuda.html#tensorfloat-32-tf32-on-ampere-devices
@@ -613,6 +626,9 @@ def main(_):
     transformer, optimizer, train_dataloader, test_dataloader = accelerator.prepare(transformer, optimizer, train_dataloader, test_dataloader)
     # ref_transformer is inference-only; wrap with accelerator but it stays on the same device
     ref_transformer = accelerator.prepare(ref_transformer)
+    # mar_transformer is inference-only; wrap with accelerator if loaded
+    if mar_transformer is not None:
+        mar_transformer = accelerator.prepare(mar_transformer)
 
     # executor to perform callbacks asynchronously. this is beneficial for the llava callbacks which makes a request to a
     # remote server running llava inference.
@@ -1001,39 +1017,73 @@ def main(_):
                                         noise_level=config.sample.noise_level,
                                     )
 
-                                # Base reference for KL loss
+                                # Mar LoRA+base or base-only reference for KL loss
                                 if config.train.beta > 0:
-                                    with transformer.module.disable_adapter():
-                                        if config.train.cfg:
-                                            base_noise_pred = transformer(
-                                                hidden_states=torch.cat([sample["latents"][:, j]] * 2),
-                                                timestep=torch.cat([sample["timesteps"][:, j]] * 2),
-                                                encoder_hidden_states=embeds,
-                                                pooled_projections=pooled_embeds,
-                                                return_dict=False,
-                                            )[0]
-                                            base_noise_pred_uncond, base_noise_pred_text = base_noise_pred.chunk(2)
-                                            base_noise_pred = (
-                                                base_noise_pred_uncond
-                                                + config.sample.guidance_scale
-                                                * (base_noise_pred_text - base_noise_pred_uncond)
+                                    if mar_transformer is not None:
+                                        kl_loss_ref = mar_transformer
+                                        with torch.no_grad():
+                                            if config.train.cfg:
+                                                mar_noise_pred = kl_loss_ref(
+                                                    hidden_states=torch.cat([sample["latents"][:, j]] * 2),
+                                                    timestep=torch.cat([sample["timesteps"][:, j]] * 2),
+                                                    encoder_hidden_states=embeds,
+                                                    pooled_projections=pooled_embeds,
+                                                    return_dict=False,
+                                                )[0]
+                                                mar_noise_pred_uncond, mar_noise_pred_text = mar_noise_pred.chunk(2)
+                                                mar_noise_pred = (
+                                                    mar_noise_pred_uncond
+                                                    + config.sample.guidance_scale
+                                                    * (mar_noise_pred_text - mar_noise_pred_uncond)
+                                                )
+                                            else:
+                                                mar_noise_pred = kl_loss_ref(
+                                                    hidden_states=sample["latents"][:, j],
+                                                    timestep=sample["timesteps"][:, j],
+                                                    encoder_hidden_states=embeds,
+                                                    pooled_projections=pooled_embeds,
+                                                    return_dict=False,
+                                                )[0]
+                                            _, _, prev_sample_mean_ref_base, _ = _sde_step(
+                                                pipeline.scheduler,
+                                                mar_noise_pred.float(),
+                                                sample["timesteps"][:, j],
+                                                sample["latents"][:, j].float(),
+                                                prev_sample=sample["next_latents"][:, j].float(),
+                                                noise_level=config.sample.noise_level,
                                             )
-                                        else:
-                                            base_noise_pred = transformer(
-                                                hidden_states=sample["latents"][:, j],
-                                                timestep=sample["timesteps"][:, j],
-                                                encoder_hidden_states=embeds,
-                                                pooled_projections=pooled_embeds,
-                                                return_dict=False,
-                                            )[0]
-                                        _, _, prev_sample_mean_ref_base, _ = _sde_step(
-                                            pipeline.scheduler,
-                                            base_noise_pred.float(),
-                                            sample["timesteps"][:, j],
-                                            sample["latents"][:, j].float(),
-                                            prev_sample=sample["next_latents"][:, j].float(),
-                                            noise_level=config.sample.noise_level,
-                                        )
+                                    else:
+                                        with transformer.module.disable_adapter():
+                                            if config.train.cfg:
+                                                base_noise_pred = transformer(
+                                                    hidden_states=torch.cat([sample["latents"][:, j]] * 2),
+                                                    timestep=torch.cat([sample["timesteps"][:, j]] * 2),
+                                                    encoder_hidden_states=embeds,
+                                                    pooled_projections=pooled_embeds,
+                                                    return_dict=False,
+                                                )[0]
+                                                base_noise_pred_uncond, base_noise_pred_text = base_noise_pred.chunk(2)
+                                                base_noise_pred = (
+                                                    base_noise_pred_uncond
+                                                    + config.sample.guidance_scale
+                                                    * (base_noise_pred_text - base_noise_pred_uncond)
+                                                )
+                                            else:
+                                                base_noise_pred = transformer(
+                                                    hidden_states=sample["latents"][:, j],
+                                                    timestep=sample["timesteps"][:, j],
+                                                    encoder_hidden_states=embeds,
+                                                    pooled_projections=pooled_embeds,
+                                                    return_dict=False,
+                                                )[0]
+                                            _, _, prev_sample_mean_ref_base, _ = _sde_step(
+                                                pipeline.scheduler,
+                                                base_noise_pred.float(),
+                                                sample["timesteps"][:, j],
+                                                sample["latents"][:, j].float(),
+                                                prev_sample=sample["next_latents"][:, j].float(),
+                                                noise_level=config.sample.noise_level,
+                                            )
 
                         # grpo logic
                         reward_mode = config.train.get("reward_mode", "task_only")
@@ -1206,4 +1256,3 @@ def main(_):
         
 if __name__ == "__main__":
     app.run(main)
-

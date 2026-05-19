@@ -34,6 +34,7 @@ def general_ocr_sd3_8gpu_opd():
     # sd3.5 medium
     config.pretrained.model = "path/to/stable-diffusion-3.5-medium"
     config.train.kl_ref_lora_path = "path/to/SD3.5M-FlowGRPO-Text"
+    config.train.mar_lora = ""#path tou your mar teacher  
 
     config.sample.num_steps = 10
     config.sample.eval_num_steps = 40

@@ -107,6 +107,8 @@ def get_config():
     train.beta = 0.0
     # pretrained lora path
     train.lora_path = None
+    # Mar LoRA path (reference LoRA for KL loss computation; if provided and non-empty, use mar_lora as reference instead of base model)
+    train.mar_lora = ""
     # KL reference LoRA path (LoRA+base reference for KL reward)
     train.kl_ref_lora_path = None
     # KL reward normalization: "none" | "per_sample" | "per_timestep" | "global"
