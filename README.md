@@ -97,7 +97,15 @@ and then change Line 130 (base_url) in rewards.py
 > **Note:** All training and evaluation prompts are located in the `dataset/` folder. Training prompts follow the format used in [flow-grpo](https://github.com/yifan123/flow_grpo), and evaluation prompts follow [T2I-CompBench](https://github.com/Karine-Huang/T2I-CompBench).
 
 ### 5. Start Training
-
+#### 5.0 Cold Start (optional)
+Before training, you can merge multiple expert LoRAs into a single cold-start LoRA to accelerate convergence:
+```bash
+bash scripts/single_node/merge.sh
+```
+After merging, set the merged LoRA path in the training config:
+```python
+config.train.lora_path = "path/to/merged/lora"
+```
 #### 5.1 GRPO-mix
 First, the GenEval rewarder and deqa services need to be deployed on other nodes.
 ```bash
