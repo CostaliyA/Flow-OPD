@@ -30,6 +30,9 @@ To avoid redundant downloads and potential storage waste during multi-GPU traini
 **Models**
 * **SD3.5**: `stabilityai/stable-diffusion-3.5-medium`
 * **Flux**: `black-forest-labs/FLUX.1-dev`
+* **GenEval Teacher**: `jieliu/SD3.5M-FlowGRPO-GenEval`
+* **OCR Teacher**: `jieliu/SD3.5M-FlowGRPO-Text`
+* **PickScore Teacher**: `jieliu/SD3.5M-FlowGRPO-PickScore`
 
 **Reward Models**
 * **PickScore**:
