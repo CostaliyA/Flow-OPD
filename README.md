@@ -213,11 +213,11 @@ The key innovations include:
 The code is being gradually open-sourced, optimized, and refactored. Please feel free to contact me if you have any questions.
 
 ### 🔄 In Progress
+- [ ] Extend the training code
 
-- [ ] Release full training code
 
 ### ✅ Completed
-
+- [x] Release the training code
 - [x] Release model weights ([HuggingFace](https://huggingface.co/CostaliyA/Flow-OPD))
 - [x] Release paper ([arXiv](https://arxiv.org/abs/2605.08063))
 
