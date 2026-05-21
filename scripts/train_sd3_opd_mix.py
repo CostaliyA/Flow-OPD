@@ -33,6 +33,7 @@ from peft import LoraConfig, get_peft_model, set_peft_model_state_dict, PeftMode
 import random
 from torch.utils.data import Dataset, DataLoader, Sampler
 from flow_grpo.ema import EMAModuleWrapper
+from flow_grpo.diffusers_patch.sd3_sde_with_logprob import sde_step_with_logprob as _sde_step
 
 tqdm = partial(tqdm.tqdm, dynamic_ncols=True)
 
@@ -910,6 +911,20 @@ def main(_):
                         logger.info(f"[OPD] No kl_ref_lora_path for dataset '{ds_name}', using base model as reference.")
                     ref_transformers[ds_name] = None
 
+        # Load Mar LoRA for KL loss (policy vs Mar LoRA+base)
+        mar_transformer = None
+        if config.train.get("mar_lora") and config.train.mar_lora != "":
+            mar_pipeline = StableDiffusion3Pipeline.from_pretrained(
+                config.pretrained.model
+            )
+            mar_pipeline.transformer.requires_grad_(False)
+            mar_pipeline.transformer.to(accelerator.device)
+            mar_transformer = PeftModel.from_pretrained(mar_pipeline.transformer, config.train.mar_lora)
+            mar_transformer.set_adapter("default")
+            mar_transformer.eval()
+            if accelerator.is_main_process:
+                logger.info(f"[Mar LoRA] Loaded mar_lora from: {config.train.mar_lora}")
+
     elif is_mixed_mode:
         # 混合数据集模式
         mixed_dataset = MixedPromptDatasetV2(config.mixed_datasets)
@@ -1022,6 +1037,20 @@ def main(_):
         ref_transformers = {}
         is_opd_mode = False
 
+        # Load Mar LoRA for KL loss (policy vs Mar LoRA+base)
+        mar_transformer = None
+        if config.train.get("mar_lora") and config.train.mar_lora != "":
+            mar_pipeline = StableDiffusion3Pipeline.from_pretrained(
+                config.pretrained.model
+            )
+            mar_pipeline.transformer.requires_grad_(False)
+            mar_pipeline.transformer.to(accelerator.device)
+            mar_transformer = PeftModel.from_pretrained(mar_pipeline.transformer, config.train.mar_lora)
+            mar_transformer.set_adapter("default")
+            mar_transformer.eval()
+            if accelerator.is_main_process:
+                logger.info(f"[Mar LoRA] Loaded mar_lora from: {config.train.mar_lora}")
+
     # 修复：negative pooled prompt embed
     neg_prompt_embed, neg_pooled_prompt_embed = compute_text_embeddings(
         [""], text_encoders, tokenizers, max_sequence_length=128, device=accelerator.device
@@ -1040,6 +1069,9 @@ def main(_):
 
     # 准备模型
     transformer, optimizer = accelerator.prepare(transformer, optimizer)
+    # mar_transformer is inference-only; wrap with accelerator if loaded
+    if mar_transformer is not None:
+        mar_transformer = accelerator.prepare(mar_transformer)
     
     # 准备 train_dataloader（混合模式不需要 prepare，因为它使用自定义迭代器）
     if not is_mixed_mode:
@@ -1455,6 +1487,10 @@ def main(_):
             else:
                 current_ref_transformer = None
 
+            # Ensure reference model is in eval mode (disables dropout etc.)
+            if current_ref_transformer is not None:
+                current_ref_transformer.eval()
+
             for i, sample in tqdm(
                 list(enumerate(samples_batched)),
                 desc=f"Epoch {epoch}.{inner_epoch}: training" + (f" ({current_ds_name})" if is_alternate_mode else ""),
@@ -1481,32 +1517,159 @@ def main(_):
                     disable=not accelerator.is_local_main_process,
                 ):
                     with accelerator.accumulate(transformer):
+                        # --- Policy forward (needs gradients) ---
                         with autocast():
-                            # OPD mode: use per-dataset ref transformer for KL reward
-                            if is_opd_mode and current_ref_transformer is not None:
-                                prev_sample, log_prob, prev_sample_mean, std_dev_t, prev_sample_mean_ref = compute_log_prob_with_ref(
-                                    transformer, current_ref_transformer, pipeline, sample, j, embeds, pooled_embeds, config
+                            if config.train.cfg:
+                                noise_pred = transformer(
+                                    hidden_states=torch.cat([sample["latents"][:, j]] * 2),
+                                    timestep=torch.cat([sample["timesteps"][:, j]] * 2),
+                                    encoder_hidden_states=embeds,
+                                    pooled_projections=pooled_embeds,
+                                    return_dict=False,
+                                )[0]
+                                noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
+                                noise_pred = (
+                                    noise_pred_uncond
+                                    + config.sample.guidance_scale
+                                    * (noise_pred_text - noise_pred_uncond)
                                 )
                             else:
-                                prev_sample, log_prob, prev_sample_mean, std_dev_t = compute_log_prob(
-                                    transformer, pipeline, sample, j, embeds, pooled_embeds, config
-                                )
-                                if config.train.beta > 0:
-                                    with torch.no_grad():
-                                        with transformer.module.disable_adapter():
-                                            _, _, prev_sample_mean_ref, _ = compute_log_prob(
-                                                transformer, pipeline, sample, j, embeds, pooled_embeds, config
-                                            )
-                                else:
-                                    prev_sample_mean_ref = None
+                                noise_pred = transformer(
+                                    hidden_states=sample["latents"][:, j],
+                                    timestep=sample["timesteps"][:, j],
+                                    encoder_hidden_states=embeds,
+                                    pooled_projections=pooled_embeds,
+                                    return_dict=False,
+                                )[0]
+                            prev_sample, log_prob, prev_sample_mean, std_dev_t = _sde_step(
+                                pipeline.scheduler,
+                                noise_pred.float(),
+                                sample["timesteps"][:, j],
+                                sample["latents"][:, j].float(),
+                                prev_sample=sample["next_latents"][:, j].float(),
+                                noise_level=config.sample.noise_level,
+                            )
 
-                        # Determine advantages based on reward_mode
+                        # --- Reference forwards (no gradients) ---
+                        with torch.no_grad():
+                            with autocast():
+                                # LoRA+base reference for KL reward
+                                if config.train.get("kl_reward_level") == "step_wise" and config.train.get("kl_scale", 0) != 0:
+                                    if is_opd_mode and current_ref_transformer is not None:
+                                        ref_trans = current_ref_transformer
+                                    else:
+                                        ref_trans = None
+
+                                    if ref_trans is not None:
+                                        if config.train.cfg:
+                                            ref_noise_pred = ref_trans(
+                                                hidden_states=torch.cat([sample["latents"][:, j]] * 2),
+                                                timestep=torch.cat([sample["timesteps"][:, j]] * 2),
+                                                encoder_hidden_states=embeds,
+                                                pooled_projections=pooled_embeds,
+                                                return_dict=False,
+                                            )[0]
+                                            ref_noise_pred_uncond, ref_noise_pred_text = ref_noise_pred.chunk(2)
+                                            ref_noise_pred = (
+                                                ref_noise_pred_uncond
+                                                + config.sample.guidance_scale
+                                                * (ref_noise_pred_text - ref_noise_pred_uncond)
+                                            )
+                                        else:
+                                            ref_noise_pred = ref_trans(
+                                                hidden_states=sample["latents"][:, j],
+                                                timestep=sample["timesteps"][:, j],
+                                                encoder_hidden_states=embeds,
+                                                pooled_projections=pooled_embeds,
+                                                return_dict=False,
+                                            )[0]
+                                        _, _, prev_sample_mean_ref_lora, _ = _sde_step(
+                                            pipeline.scheduler,
+                                            ref_noise_pred.float(),
+                                            sample["timesteps"][:, j],
+                                            sample["latents"][:, j].float(),
+                                            prev_sample=sample["next_latents"][:, j].float(),
+                                            noise_level=config.sample.noise_level,
+                                        )
+                                    else:
+                                        prev_sample_mean_ref_lora = None
+
+                                # Mar LoRA+base or base-only reference for KL loss
+                                if config.train.beta > 0:
+                                    if mar_transformer is not None:
+                                        kl_loss_ref = mar_transformer
+                                        with torch.no_grad():
+                                            if config.train.cfg:
+                                                mar_noise_pred = kl_loss_ref(
+                                                    hidden_states=torch.cat([sample["latents"][:, j]] * 2),
+                                                    timestep=torch.cat([sample["timesteps"][:, j]] * 2),
+                                                    encoder_hidden_states=embeds,
+                                                    pooled_projections=pooled_embeds,
+                                                    return_dict=False,
+                                                )[0]
+                                                mar_noise_pred_uncond, mar_noise_pred_text = mar_noise_pred.chunk(2)
+                                                mar_noise_pred = (
+                                                    mar_noise_pred_uncond
+                                                    + config.sample.guidance_scale
+                                                    * (mar_noise_pred_text - mar_noise_pred_uncond)
+                                                )
+                                            else:
+                                                mar_noise_pred = kl_loss_ref(
+                                                    hidden_states=sample["latents"][:, j],
+                                                    timestep=sample["timesteps"][:, j],
+                                                    encoder_hidden_states=embeds,
+                                                    pooled_projections=pooled_embeds,
+                                                    return_dict=False,
+                                                )[0]
+                                            _, _, prev_sample_mean_ref_base, _ = _sde_step(
+                                                pipeline.scheduler,
+                                                mar_noise_pred.float(),
+                                                sample["timesteps"][:, j],
+                                                sample["latents"][:, j].float(),
+                                                prev_sample=sample["next_latents"][:, j].float(),
+                                                noise_level=config.sample.noise_level,
+                                            )
+                                    else:
+                                        with transformer.module.disable_adapter():
+                                            if config.train.cfg:
+                                                base_noise_pred = transformer(
+                                                    hidden_states=torch.cat([sample["latents"][:, j]] * 2),
+                                                    timestep=torch.cat([sample["timesteps"][:, j]] * 2),
+                                                    encoder_hidden_states=embeds,
+                                                    pooled_projections=pooled_embeds,
+                                                    return_dict=False,
+                                                )[0]
+                                                base_noise_pred_uncond, base_noise_pred_text = base_noise_pred.chunk(2)
+                                                base_noise_pred = (
+                                                    base_noise_pred_uncond
+                                                    + config.sample.guidance_scale
+                                                    * (base_noise_pred_text - base_noise_pred_uncond)
+                                                )
+                                            else:
+                                                base_noise_pred = transformer(
+                                                    hidden_states=sample["latents"][:, j],
+                                                    timestep=sample["timesteps"][:, j],
+                                                    encoder_hidden_states=embeds,
+                                                    pooled_projections=pooled_embeds,
+                                                    return_dict=False,
+                                                )[0]
+                                            _, _, prev_sample_mean_ref_base, _ = _sde_step(
+                                                pipeline.scheduler,
+                                                base_noise_pred.float(),
+                                                sample["timesteps"][:, j],
+                                                sample["latents"][:, j].float(),
+                                                prev_sample=sample["next_latents"][:, j].float(),
+                                                noise_level=config.sample.noise_level,
+                                            )
+
+                        # grpo logic
                         reward_mode = config.train.get("reward_mode", "task_only")
                         if reward_mode == "kl_only":
-                            # OPD: use step-wise KL reward as advantage
-                            if prev_sample_mean_ref is not None and config.train.get("kl_scale", 0) != 0:
-                                kl_reward = ((prev_sample_mean - prev_sample_mean_ref) ** 2).mean(dim=(1, 2, 3), keepdim=True) / (2 * std_dev_t ** 2)
+                            # advantages = kl_scale * kl_reward (negative KL as timestep-level advantage)
+                            if config.train.get("kl_reward_level") == "step_wise" and config.train.get("kl_scale", 0) != 0:
+                                kl_reward = ((prev_sample_mean - prev_sample_mean_ref_lora) ** 2).mean(dim=(1, 2, 3), keepdim=True) / (2 * std_dev_t ** 2)
                                 kl_reward = kl_reward.squeeze(-1).squeeze(-1)
+
                                 kl_norm = config.train.get("kl_norm", "none")
                                 if kl_norm == "per_sample":
                                     kl_reward = (kl_reward - kl_reward.mean()) / (kl_reward.std() + 1e-4)
@@ -1514,39 +1677,125 @@ def main(_):
                                     kl_reward = (kl_reward - kl_reward.mean()) / (kl_reward.std() + 1e-4)
                                 elif kl_norm == "global":
                                     kl_reward = (kl_reward - kl_reward.mean()) / (kl_reward.std() + 1e-4)
+
                                 advantages = config.train.kl_scale * kl_reward
+                                advantages = torch.clamp(
+                                    advantages,
+                                    -config.train.adv_clip_max,
+                                    config.train.adv_clip_max,
+                                )
                             else:
                                 advantages = torch.zeros_like(sample["advantages"][:, j])
-                            if accelerator.is_main_process and i == 0 and j == 0:
-                                wandb.log({"kl_reward": kl_reward.mean().detach().cpu()}, step=global_step)
+                        elif reward_mode == "mixed":
+                            # Task reward is broadcast from the last step (sparse), KL reward is step-wise (dense)
+                            last_step_index = num_train_timesteps - 1
+                            task_advantage = sample["advantages"][:, last_step_index]
+
+                            kl_norm = config.train.get("kl_norm", "none")
+                            if kl_norm == "per_sample":
+                                task_advantage = (task_advantage - task_advantage.mean()) / (task_advantage.std() + 1e-4)
+                            elif kl_norm == "per_timestep":
+                                task_advantage = (task_advantage - task_advantage.mean()) / (task_advantage.std() + 1e-4)
+                            elif kl_norm == "global":
+                                task_advantage = (task_advantage - task_advantage.mean()) / (task_advantage.std() + 1e-4)
+
+                            task_advantage = torch.clamp(
+                                task_advantage,
+                                -config.train.adv_clip_max,
+                                config.train.adv_clip_max,
+                            )
+                            if config.train.get("kl_reward_level") == "step_wise" and config.train.get("kl_scale", 0) != 0:
+                                if prev_sample_mean_ref_lora is not None:
+                                    kl_reward = ((prev_sample_mean - prev_sample_mean_ref_lora) ** 2).mean(dim=(1, 2, 3), keepdim=True) / (2 * std_dev_t ** 2)
+                                else:
+                                    kl_reward = torch.zeros_like(prev_sample_mean.mean(dim=(1, 2, 3), keepdim=True))
+                                kl_reward = kl_reward.squeeze(-1).squeeze(-1)
+
+                                if kl_norm == "per_sample":
+                                    kl_reward = (kl_reward - kl_reward.mean()) / (kl_reward.std() + 1e-4)
+                                elif kl_norm == "per_timestep":
+                                    kl_reward = (kl_reward - kl_reward.mean()) / (kl_reward.std() + 1e-4)
+                                elif kl_norm == "global":
+                                    kl_reward = (kl_reward - kl_reward.mean()) / (kl_reward.std() + 1e-4)
+
+                                advantages = task_advantage + config.train.kl_scale * kl_reward
+                                advantages = torch.clamp(
+                                    advantages,
+                                    -config.train.adv_clip_max,
+                                    config.train.adv_clip_max,
+                                )
+                            else:
+                                advantages = task_advantage
+                        elif reward_mode == "gkd":
+                            # GKD: directly use mean(kl_reward) as loss, no policy loss / ratio
+                            if prev_sample_mean_ref_lora is not None:
+                                kl_reward_gkd = ((prev_sample_mean - prev_sample_mean_ref_lora) ** 2).mean(dim=(1, 2, 3), keepdim=True) / (2 * std_dev_t ** 2)
+                            else:
+                                kl_reward_gkd = torch.zeros_like(prev_sample_mean.mean(dim=(1, 2, 3), keepdim=True))
+                            gkd_loss = torch.mean(kl_reward_gkd)
+                            policy_loss = torch.tensor(0.0, device=gkd_loss.device, dtype=gkd_loss.dtype)
                         else:
+                            # task_only: advantage already normalized and broadcast to all steps during sampling
                             advantages = torch.clamp(
                                 sample["advantages"][:, j],
                                 -config.train.adv_clip_max,
                                 config.train.adv_clip_max,
                             )
 
-                        ratio = torch.exp(log_prob - sample["log_probs"][:, j])
-                        unclipped_loss = -advantages * ratio
-                        clipped_loss = -advantages * torch.clamp(
-                            ratio,
-                            1.0 - config.train.clip_range,
-                            1.0 + config.train.clip_range,
-                        )
-                        policy_loss = torch.mean(torch.maximum(unclipped_loss, clipped_loss))
-                        if config.train.beta > 0 and prev_sample_mean_ref is not None:
-                            kl_loss = ((prev_sample_mean - prev_sample_mean_ref) ** 2).mean(dim=(1,2,3), keepdim=True) / (2 * std_dev_t ** 2)
-                            kl_loss = torch.mean(kl_loss)
-                            loss = policy_loss + config.train.beta * kl_loss
+                        if reward_mode == "gkd":
+                            loss = gkd_loss
+                            if config.train.beta > 0:
+                                kl_loss = ((prev_sample_mean - prev_sample_mean_ref_base) ** 2).mean(dim=(1, 2, 3), keepdim=True) / (2 * std_dev_t ** 2)
+                                kl_loss = torch.mean(kl_loss)
+                                loss = gkd_loss + config.train.beta * kl_loss
+                            else:
+                                kl_loss = torch.tensor(0.0, device=gkd_loss.device, dtype=gkd_loss.dtype)
                         else:
-                            kl_loss = torch.tensor(0.0, device=accelerator.device)
-                            loss = policy_loss
+                            ratio = torch.exp(log_prob - sample["log_probs"][:, j])
+                            unclipped_loss = -advantages * ratio
+                            clipped_loss = -advantages * torch.clamp(
+                                ratio,
+                                1.0 - config.train.clip_range,
+                                1.0 + config.train.clip_range,
+                            )
+                            policy_loss = torch.mean(torch.maximum(unclipped_loss, clipped_loss))
+                            if config.train.beta > 0:
+                                kl_loss = ((prev_sample_mean - prev_sample_mean_ref_base) ** 2).mean(dim=(1,2,3), keepdim=True) / (2 * std_dev_t ** 2)
+                                kl_loss = torch.mean(kl_loss)
+                                loss = policy_loss + config.train.beta * kl_loss
+                            else:
+                                loss = policy_loss
 
-                        info["approx_kl"].append(0.5 * torch.mean((log_prob - sample["log_probs"][:, j]) ** 2))
-                        info["clipfrac"].append(torch.mean((torch.abs(ratio - 1.0) > config.train.clip_range).float()))
-                        info["clipfrac_gt_one"].append(torch.mean((ratio - 1.0 > config.train.clip_range).float()))
-                        info["clipfrac_lt_one"].append(torch.mean((1.0 - ratio > config.train.clip_range).float()))
-                        info["policy_loss"].append(policy_loss)
+                        if reward_mode == "gkd":
+                            info["gkd_loss"].append(gkd_loss)
+                            info["policy_loss"].append(policy_loss)
+                        else:
+                            info["approx_kl"].append(
+                                0.5
+                                * torch.mean((log_prob - sample["log_probs"][:, j]) ** 2)
+                            )
+                            info["clipfrac"].append(
+                                torch.mean(
+                                    (
+                                        torch.abs(ratio - 1.0) > config.train.clip_range
+                                    ).float()
+                                )
+                            )
+                            info["clipfrac_gt_one"].append(
+                                torch.mean(
+                                    (
+                                        ratio - 1.0 > config.train.clip_range
+                                    ).float()
+                                )
+                            )
+                            info["clipfrac_lt_one"].append(
+                                torch.mean(
+                                    (
+                                        1.0 - ratio > config.train.clip_range
+                                    ).float()
+                                )
+                            )
+                            info["policy_loss"].append(policy_loss)
                         if config.train.beta > 0:
                             info["kl_loss"].append(kl_loss)
                         info["loss"].append(loss)
