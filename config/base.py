@@ -117,7 +117,7 @@ def get_config():
     # - "per_timestep": normalize KL per timestep across all samples in batch
     # - "global": normalize KL globally across all samples and timesteps
     train.kl_norm = "none"
-    # reward mode for KL: "task_only" | "kl_only" | "mixed"
+    # reward mode for KL: "task_only" | "kl_only" | "mixed" | "gkd"
     train.reward_mode = "task_only"
     # KL reward level: "step_wise" (per timestep) | "trajectory" (accumulated across timesteps)
     train.kl_reward_level = "step_wise"

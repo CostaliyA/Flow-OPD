@@ -1169,6 +1169,12 @@ def main(_):
                                 )
                             else:
                                 advantages = task_advantage
+                        elif reward_mode == "gkd":
+                            # GKD: directly use mean(kl_reward) as loss, no policy loss / ratio
+                            # prev_sample_mean_ref_lora must be computed (kl_reward_level == step_wise)
+                            kl_reward_gkd = ((prev_sample_mean - prev_sample_mean_ref_lora) ** 2).mean(dim=(1, 2, 3), keepdim=True) / (2 * std_dev_t ** 2)
+                            gkd_loss = torch.mean(kl_reward_gkd)
+                            policy_loss = torch.tensor(0.0, device=gkd_loss.device, dtype=gkd_loss.dtype)
                         else:
                             # task_only: advantage already normalized and broadcast to all steps during sampling
                             advantages = torch.clamp(
@@ -1177,52 +1183,60 @@ def main(_):
                                 config.train.adv_clip_max,
                             )
 
-                        ratio = torch.exp(log_prob - sample["log_probs"][:, j])
-                        unclipped_loss = -advantages * ratio
-                        clipped_loss = -advantages * torch.clamp(
-                            ratio,
-                            1.0 - config.train.clip_range,
-                            1.0 + config.train.clip_range,
-                        )
-                        policy_loss = torch.mean(torch.maximum(unclipped_loss, clipped_loss))
-                        if config.train.beta > 0:
-                            kl_loss = ((prev_sample_mean - prev_sample_mean_ref_base) ** 2).mean(dim=(1,2,3), keepdim=True) / (2 * std_dev_t ** 2)
-                            kl_loss = torch.mean(kl_loss)
-                            loss = policy_loss + config.train.beta * kl_loss
+                        if reward_mode == "gkd":
+                            loss = gkd_loss
+                            if config.train.beta > 0:
+                                kl_loss = ((prev_sample_mean - prev_sample_mean_ref_base) ** 2).mean(dim=(1, 2, 3), keepdim=True) / (2 * std_dev_t ** 2)
+                                kl_loss = torch.mean(kl_loss)
+                                loss = gkd_loss + config.train.beta * kl_loss
                         else:
-                            loss = policy_loss
+                            ratio = torch.exp(log_prob - sample["log_probs"][:, j])
+                            unclipped_loss = -advantages * ratio
+                            clipped_loss = -advantages * torch.clamp(
+                                ratio,
+                                1.0 - config.train.clip_range,
+                                1.0 + config.train.clip_range,
+                            )
+                            policy_loss = torch.mean(torch.maximum(unclipped_loss, clipped_loss))
+                            if config.train.beta > 0:
+                                kl_loss = ((prev_sample_mean - prev_sample_mean_ref_base) ** 2).mean(dim=(1,2,3), keepdim=True) / (2 * std_dev_t ** 2)
+                                kl_loss = torch.mean(kl_loss)
+                                loss = policy_loss + config.train.beta * kl_loss
+                            else:
+                                loss = policy_loss
 
-                        info["approx_kl"].append(
-                            0.5
-                            * torch.mean((log_prob - sample["log_probs"][:, j]) ** 2)
-                        )
-                        info["clipfrac"].append(
-                            torch.mean(
-                                (
-                                    torch.abs(ratio - 1.0) > config.train.clip_range
-                                ).float()
+                        if reward_mode == "gkd":
+                            info["gkd_loss"].append(gkd_loss)
+                            info["policy_loss"].append(policy_loss)
+                        else:
+                            info["approx_kl"].append(
+                                0.5
+                                * torch.mean((log_prob - sample["log_probs"][:, j]) ** 2)
                             )
-                        )
-                        info["clipfrac_gt_one"].append(
-                            torch.mean(
-                                (
-                                    ratio - 1.0 > config.train.clip_range
-                                ).float()
+                            info["clipfrac"].append(
+                                torch.mean(
+                                    (
+                                        torch.abs(ratio - 1.0) > config.train.clip_range
+                                    ).float()
+                                )
                             )
-                        )
-                        info["clipfrac_lt_one"].append(
-                            torch.mean(
-                                (
-                                    1.0 - ratio > config.train.clip_range
-                                ).float()
+                            info["clipfrac_gt_one"].append(
+                                torch.mean(
+                                    (
+                                        ratio - 1.0 > config.train.clip_range
+                                    ).float()
+                                )
                             )
-                        )
-                        info["policy_loss"].append(policy_loss)
+                            info["clipfrac_lt_one"].append(
+                                torch.mean(
+                                    (
+                                        1.0 - ratio > config.train.clip_range
+                                    ).float()
+                                )
+                            )
+                            info["policy_loss"].append(policy_loss)
                         if config.train.beta > 0:
                             info["kl_loss"].append(kl_loss)
-                        if config.train.get("kl_reward_level") == "step_wise" and config.train.get("kl_scale", 0) != 0:
-                            info["kl_reward"].append(torch.mean(kl_reward))
-
                         info["loss"].append(loss)
 
                         # backward pass
