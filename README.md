@@ -28,12 +28,12 @@ pip install -e .
 To avoid redundant downloads and potential storage waste during multi-GPU training, please pre-download the required models in advance.
 
 **Models**
+We optimized the OCR and Deqa experts to achieve better training results.
 * **SD3.5**: `stabilityai/stable-diffusion-3.5-medium`
-* **Flux**: `black-forest-labs/FLUX.1-dev`
-* **GenEval Teacher**: `jieliu/SD3.5M-FlowGRPO-GenEval`
+* **GenEval Teacher**: `CostaliyA/SD3.5M-FlowGRPO-OCR-3240` or `jieliu/SD3.5M-FlowGRPO-GenEval`
 * **OCR Teacher**: `jieliu/SD3.5M-FlowGRPO-Text`
 * **PickScore Teacher**: `jieliu/SD3.5M-FlowGRPO-PickScore`
-
+* **Deqa Teacher(optional)**: `CostaliyA/SD3.5M-FlowGRPO-Deqa-Mix`
 **Reward Models**
 * **PickScore**:
   * `laion/CLIP-ViT-H-14-laion2B-s32B-b79K`
@@ -124,6 +124,8 @@ bash scripts/single_node/sd3_opd_example.sh
 
 # Multi-teacher OPD (local single-node, multi-GPU)
 bash scripts/single_node/sd3_opd_mix_local.sh
+# reward_mode: kl_only or gkd(sft)
+# train.mar_lora: The lora path for full-process supervision defaults to the base model.
 ```
 - **Single-teacher**: Uses a single `kl_ref_lora_path` reference for OPD KL reward.
 - **Multi-teacher**: Uses `alternate` training mode with per-dataset `kl_ref_lora_path` — each dataset (e.g., OCR, GenEval) uses its own teacher LoRA. Currently configured with 8 GPUs in `mix_opd_8gpu`. Reduce `num_processes` in the shell script and adjust batch sizes in `config/grpo.py:mix_opd_8gpu` for fewer GPUs.
