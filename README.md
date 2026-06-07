@@ -28,12 +28,14 @@ pip install -e .
 To avoid redundant downloads and potential storage waste during multi-GPU training, please pre-download the required models in advance.
 
 **Models**
+
 We optimized the OCR and Deqa experts to achieve better training results.
 * **SD3.5**: `stabilityai/stable-diffusion-3.5-medium`
 * **GenEval Teacher**: `CostaliyA/SD3.5M-FlowGRPO-OCR-3240` or `jieliu/SD3.5M-FlowGRPO-GenEval`
 * **OCR Teacher**: `jieliu/SD3.5M-FlowGRPO-Text`
 * **PickScore Teacher**: `jieliu/SD3.5M-FlowGRPO-PickScore`
 * **Deqa Teacher(optional)**: `CostaliyA/SD3.5M-FlowGRPO-Deqa-Mix`
+  
 **Reward Models**
 * **PickScore**:
   * `laion/CLIP-ViT-H-14-laion2B-s32B-b79K`
